@@ -1,0 +1,364 @@
+/**
+ * @module symbol
+ * @description 这里定义通用的符号（语法符号或者自定义书签符号）
+ * 以及通用符号的命令实现与注册
+ */
+
+import * as vscode from "vscode";
+import type { CureSymbolKind } from "./types/symbol";
+import crypto from "crypto";
+
+/** 表示一个文件的任意符号哟，包括语法符号、书签等 */
+export class CureOneSymbol {
+    public readonly id: string;
+    public readonly name: string;
+    /** 符号的种类，可以根据它确定该符号应该用哪个 icon 来展示 */
+    public readonly kind: CureSymbolKind;
+    public readonly detail: string;
+    public readonly range: vscode.Range;
+    public readonly selection_range: vscode.Range;
+    /** 存储原始的 symbol，当解析完成之后，此项内容会被删除 */
+    private _children: vscode.DocumentSymbol[];
+    /** 存储解析后的 child symbol */
+    private children?: CureOneSymbol[];
+    /** 该符号来自哪个文件 */
+    public readonly uri: vscode.Uri;
+
+    private constructor(
+        uri: vscode.Uri,
+        name: string,
+        kind: CureSymbolKind,
+        detail: string,
+        range: vscode.Range,
+        selection_range: vscode.Range,
+        children: vscode.DocumentSymbol[] = []
+    ) {
+        this.id = crypto.randomUUID();
+        this.uri = uri;
+        this.name = name;
+        this.kind = kind;
+        this.detail = detail;
+        this.range = range;
+        this.selection_range = selection_range;
+        this._children = children;
+    }
+
+    /** 从原始的符号创建 */
+    static from_raw_symbol(uri: vscode.Uri, symbol: vscode.DocumentSymbol): CureOneSymbol {
+        return new CureOneSymbol(
+            uri,
+            symbol.name,
+            // 获取 symbol kind 的字符串形式
+            vscode.SymbolKind[symbol.kind] as CureSymbolKind,
+            symbol.detail,
+            symbol.range,
+            symbol.selectionRange,
+            symbol.children
+        );
+    }
+
+    /** 从行书签创建
+     *
+     * @param uri 书签所在的文件
+     * @param line 书签所在的行号，从 0 开始
+     * @param col 书签所在的列号，从 0 开始
+     * @param name 书签名称，没有则会用所在行的内容作为名称
+     */
+    static from_line_bookmark(
+        uri: vscode.Uri,
+        line: number,
+        col: number,
+        name?: string
+    ): CureOneSymbol {
+        // 需要获取书签所行的内容
+        const doc = vscode.window.activeTextEditor?.document;
+        const text = doc?.lineAt(line).text || "";
+        const detail = CureOneSymbol.create_line_info(line, col);
+        name = name || text.trim();
+        return new CureOneSymbol(
+            uri,
+            name || detail,
+            "CureLineBookmark",
+            name ? detail : "",
+            new vscode.Range(line, col, line, col),
+            new vscode.Range(line, col, line, col + text.length)
+        );
+    }
+
+    /** 自定义书签创建
+     * @param uri 书签所在的文件
+     * @param name 书签名称
+     * @param line 书签所在的行号，从 0 开始
+     * @param col 书签所在的列号，从 0 开始
+     */
+    static from_custom_bookmark(
+        uri: vscode.Uri,
+        name: string,
+        line: number,
+        col: number
+    ): CureOneSymbol {
+        return new CureOneSymbol(
+            uri,
+            name,
+            "CureCustomBookmark",
+            CureOneSymbol.create_line_info(line, col),
+            new vscode.Range(line, col, line, col),
+            new vscode.Range(line, col, line, col)
+        );
+    }
+
+    public get Children(): CureOneSymbol[] {
+        if (this.children === undefined) {
+            this.children = this._children.map((v) => CureOneSymbol.from_raw_symbol(this.uri, v));
+            this._children = [];
+        }
+        return this.children;
+    }
+
+    /** 获取所在行、列信息，如 (Ln 1, Col 1) */
+    public get LineInfo(): string {
+        const line = this.range.start.line + 1;
+        const col = this.range.start.character + 1;
+        return CureOneSymbol.create_line_info(line, col);
+    }
+
+    private static create_line_info(line: number, col: number): string {
+        return `(Ln ${line + 1}, Col ${col + 1})`;
+    }
+
+    // #region 获取符号的图标
+
+    private icon?: vscode.ThemeIcon;
+    /** 获取该符号对应的 symbol icon
+     *
+     * https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
+     */
+    public get Icon(): vscode.ThemeIcon {
+        if (this.icon !== undefined) {
+            return this.icon;
+        }
+
+        // 处理自定义的 symbol kind
+        if (this.kind === "CureRegion") {
+            return new vscode.ThemeIcon(`symbol-namespace`);
+        } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
+            return new vscode.ThemeIcon("bookmark");
+        }
+
+        /** 根据观察，如果 kind 中只有一个大写，则直接转为小写即可。比如 `Function` 变为 `function`
+         *
+         * 否则，需要在原本大写的前面加上 - 符号。比如 `TypeParameter` 变为 `type-parameter`
+         */
+        const str = this.kind
+            // 第一个 ([A-Z][a-z]*) 表示匹配大写字母开头的单词
+            // 然后在它前面插入一个符号 -，所以最后输出的时候，需要去掉第一个符号嘛
+            .replace(/([A-Z][a-z]*)+?/g, "-$1")
+            .slice(1)
+            .toLowerCase();
+
+        this.icon = new vscode.ThemeIcon(`symbol-${str}`, this.Color);
+        return this.icon;
+    }
+
+    private color?: vscode.ThemeColor;
+    /** 获取该符号对应的 symbol color
+     *
+     * https://code.visualstudio.com/api/references/theme-color#symbol-icons-colors
+     */
+    public get Color(): vscode.ThemeColor {
+        if (this.color !== undefined) {
+            return this.color;
+        }
+
+        // 处理自定义的 symbol kind
+        if (this.kind === "CureRegion") {
+            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
+        } else if (this.kind === "CureLineBookmark") {
+            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
+        } else if (this.kind === "CureCustomBookmark") {
+            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
+        }
+
+        /** 根据观察，将 kind 的第一个单词转为小写 + Foreground 即可。比如 `Function` 变为 `functionForeground`*/
+        const str = this.kind[0].toLowerCase() + this.kind.slice(1) + "Foreground";
+        this.color = new vscode.ThemeColor(`symbolIcon-${str}`);
+        return this.color;
+    }
+
+    // #endregion 获取符号的图标
+
+    // #region 获取符号的注释
+
+    /** 注释风格为 c 语言系列 */
+    private static readonly c_family_comment = new Set([
+        "c",
+        "cpp",
+        "csharp",
+        "java",
+        "javascript",
+        "typescript",
+        "css",
+    ]);
+    /** 注释风格为 python 系列 */
+    private static readonly py_family_comment = new Set(["python", "toml"]);
+
+    /** 该符号上面的注释内容 */
+    private comment?: string;
+    /** 获取该符号所在行、以及上方的注释 */
+    public get Comment(): string {
+        if (this.kind === "CureCustomBookmark") {
+            return this.name;
+        }
+        if (this.comment !== undefined) {
+            return this.comment;
+        }
+        // #cure-warn 这里有问题，居然访问当前文档！但是好像也不应该访问其它文件
+        // 此处仅仅是开发过程中的调试
+        /** 当前打开的文档对象 */
+        const curr_doc = vscode.window.activeTextEditor?.document;
+        if (curr_doc === undefined || curr_doc.uri.toString() !== this.uri.toString()) {
+            return "";
+        }
+
+        const start_line = this.range.start.line;
+        if (start_line < 0 || start_line >= curr_doc.lineCount) {
+            return "";
+        }
+
+        /** 符号所在行的内容 */
+        const curr_line_text = curr_doc.lineAt(start_line).text.trim();
+        if (start_line === 0) {
+            this.comment = curr_line_text;
+            return this.comment;
+        }
+
+        const comments = [curr_line_text];
+        // 从符号的上一行开始咯，好像 python 中的文档注释可以写在下面？？算了，先不管了
+        let curr_line = start_line - 1;
+        // 如果向上查看的第一行是块注释，则需要标记，直到找到块注释的起始位置为止
+        const line = curr_doc.lineAt(curr_line).text.trim();
+        const is_block_comment_end = this.is_block_comment_end(
+            curr_doc.languageId.toLowerCase(),
+            line
+        );
+        // 开始向上不断查看注释内容
+        while (curr_line >= 0) {
+            const line = curr_doc.lineAt(curr_line).text.trim();
+
+            // 如果是块注释的开始，那么就跳出循环
+            if (this.is_block_comment_start(curr_doc.languageId.toLowerCase(), line)) {
+                comments.unshift(line);
+                break;
+            }
+
+            // 如果是块注释，那么中间的行直接添加，不管空格等等，否则需要判断每一行
+            if (
+                !is_block_comment_end &&
+                // 根据不同语言，查看当前行是否为注释了
+                (!line || !this.is_comment_line(curr_doc.languageId.toLowerCase(), line))
+            ) {
+                break;
+            }
+            // 为了保持最终生成的注释的顺序，需要从头添加
+            // 这里没有去除注释前面的 // 等符号，懒得弄了，比较麻烦
+            comments.unshift(line);
+            --curr_line;
+        }
+
+        this.comment = comments.join("\n");
+        return this.comment;
+    }
+
+    /** 判断某行文本是否为块注释的起始 */
+    private is_block_comment_start(language: string, line: string): boolean {
+        if (line.startsWith("/*")) {
+            return CureOneSymbol.c_family_comment.has(language);
+        } else if (line.startsWith("<!--")) {
+            return language === "html";
+        }
+        return false;
+    }
+
+    /** 判断某行文本是否为块注释的结束 */
+    private is_block_comment_end(language: string, line: string): boolean {
+        if (line.startsWith("*/")) {
+            return CureOneSymbol.c_family_comment.has(language);
+        } else if (line.startsWith("-->")) {
+            return language === "html";
+        }
+        return false;
+    }
+
+    /** 判断某行文本是否为注释 */
+    private is_comment_line(language: string, line: string): boolean {
+        if (line.startsWith("//") || line.startsWith("/*")) {
+            return CureOneSymbol.c_family_comment.has(language);
+        } else if (line.startsWith("#")) {
+            return CureOneSymbol.py_family_comment.has(language);
+        }
+        return false;
+    }
+
+    // #endregion 获取符号的注释
+}
+
+/** 通用符号的命令实现与注册 */
+export class CureSymbolCMD {
+    private static instance?: CureSymbolCMD;
+
+    private constructor() {
+        CureSymbolCMD.instance = this;
+    }
+
+    public static get Instance() {
+        if (!CureSymbolCMD.instance) {
+            throw new Error("CureSymbolCMD is not initialized!");
+        }
+        return CureSymbolCMD.instance;
+    }
+
+    /** 注册所有此类的命令 */
+    public static register(ctx: vscode.ExtensionContext) {
+        const self = new CureSymbolCMD();
+        const commands = [self.register_locate()];
+        ctx.subscriptions.push(...commands);
+        return self;
+    }
+
+    // #region 定位到符号的位置
+
+    /** 定位到符号的位置 */
+    private readonly cmd_locate = "cure-outline.locate";
+
+    /** 定位到该符号的位置。会打开其所在的文件 */
+    private register_locate() {
+        return vscode.commands.registerCommand(
+            this.cmd_locate,
+            async (symbol: CureOneSymbol, callback?: () => void) => {
+                // 打开文档
+                try {
+                    const editor = await vscode.window.showTextDocument(symbol.uri);
+                    // 定位到指定位置，并且高亮所在位置
+                    const range = symbol.selection_range;
+                    editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+                    editor.selection = new vscode.Selection(range.start, range.end);
+                    callback?.();
+                } catch (e: any) {
+                    vscode.window.showErrorMessage("open file failed:" + e.message);
+                    return;
+                }
+            }
+        );
+    }
+
+    /** 创建符号跳转的命令。指定符号、以及触发点击时的操作 */
+    public create_locate(symbol: CureOneSymbol, callback?: () => void): vscode.Command {
+        return {
+            title: "locate",
+            command: this.cmd_locate,
+            arguments: [symbol, callback],
+        };
+    }
+
+    // #endregion 定位到符号的位置
+}

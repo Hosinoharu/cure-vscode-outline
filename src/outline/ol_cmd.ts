@@ -1,0 +1,327 @@
+/**
+ * @module olcmds
+ * @description 实现 `outline tree view` 的命令
+ */
+
+import * as vscode from "vscode";
+import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
+import { debounce_sync } from "../common";
+import { OutlineSortType, SortCmdType, SwitchCmdType } from "../types/symbol";
+
+/** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
+export class CureSymbolTreeViewCMD {
+    private static instance?: CureSymbolTreeViewCMD;
+    private readonly item_handler: CureSymbolTreeItemHandler;
+
+    private constructor(
+        private readonly provider: CureSymbolTreeProvider,
+        private readonly view: vscode.TreeView<CureSymbolTreeItem>
+    ) {
+        CureSymbolTreeViewCMD.instance = this;
+        this.item_handler = new CureSymbolTreeItemHandler(provider, view);
+    }
+
+    /** 获取单例 */
+    public static get Instance() {
+        if (!CureSymbolTreeViewCMD.instance) {
+            throw new Error("CureTreeViewCMD is not initialized!");
+        }
+        return CureSymbolTreeViewCMD.instance;
+    }
+
+    /** 注册所有此类的命令 */
+    public static register(
+        ctx: vscode.ExtensionContext,
+        provider: CureSymbolTreeProvider,
+        view: vscode.TreeView<CureSymbolTreeItem>
+    ) {
+        const self = new CureSymbolTreeViewCMD(provider, view);
+        self.init_all_context();
+        const commands = [
+            self.register_reload_symbol(),
+
+            // 开关类命令的注册
+            self.register_expand_all(),
+            self.register_expand_all_off(),
+
+            self.register_sort_by_position(),
+            self.register_sort_by_position_off(),
+
+            self.register_sort_by_name(),
+            self.register_sort_by_name_off(),
+
+            self.register_sort_by_kind(),
+            self.register_sort_by_kind_off(),
+        ];
+        ctx.subscriptions.push(...commands);
+        return self;
+    }
+
+    // #region 注册：重新加载当前文件的符号
+
+    private readonly cmd_reload_symbol = "cure-outline.reload-symbol";
+
+    private register_reload_symbol() {
+        return vscode.commands.registerCommand(this.cmd_reload_symbol, async () => {
+            // 获取当前打开的文档 uri
+            const uri = vscode.window.activeTextEditor?.document.uri;
+            if (uri) {
+                await this.provider.reload_symbol(uri);
+            }
+        });
+    }
+
+    // #endregion
+
+    // ==================================
+    //       下面是开关类命令的注册
+    // ==================================
+
+    //#region 开关式命令的上下文管理
+
+    // 开关式命令：具备【开启、关闭】两种状态的命令，比如【全部折叠、全部展开】就是【一对开关命令】
+    // 开关式上下文是为了在菜单中可以显示【已启用、未启用】两种状态
+    // 上下文的命名格式如下：加入 `expand-all` 是开关命令，那么 `expand-off` 就是关闭命令
+    // 那么上下文 `cure-outline-is-expand-all` 就是开关式上下文
+    // 注意：在执行开关类命令的时候，需要【更新上下文】哟
+
+    private init_all_context() {
+        // 默认情况下不展开
+        this.update_switch_context("expand-all-off");
+        this.update_switch_context("expand-only-one-off");
+        // 默认排序方式为 position
+        this.update_sort_context("position");
+    }
+
+    /** 更新开关式命令的上下文，此类上下文命名格式：`cure-outline-is-xxx`
+     * - 比如传入 `expand-all`，这说明上下文 `ure-outline-is-expand-all` 为 `true`
+     * - 比如传入 `expand-all-off`，这说明上下文 `ure-outline-is-expand-all` 为 `false`
+     */
+    private update_switch_context(type: SwitchCmdType) {
+        const index = type.indexOf("-off");
+        const is_on = index < 0;
+        const name = is_on ? type : type.slice(0, index);
+
+        vscode.commands.executeCommand("setContext", `cure-outline-is-${name}`, is_on);
+    }
+
+    /** 更新排序的上下文。 只有在切换排序方式的时候，才需要更新上下文！
+     *
+     * 将另外两个排序的上下文设置为 `false` 就可以不显示那两个了
+     */
+    private update_sort_context(type: OutlineSortType) {
+        // 修改其它排序方式的上下文
+        const sorts: OutlineSortType[] = ["position", "name", "kind"];
+        sorts.forEach((v) => {
+            if (v !== type) {
+                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, false);
+            } else {
+                // 别忘了把自己给设置
+                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, true);
+            }
+        });
+    }
+
+    //#endregion
+
+    //#region 注册：折叠与展开全部
+
+    private readonly cmd_expand_all = "cure-outline.expand-all";
+    private readonly cmd_expand_all_off = "cure-outline.expand-all-off";
+
+    private register_expand_all() {
+        return vscode.commands.registerCommand(this.cmd_expand_all, () => {
+            this.update_switch_context("expand-all");
+            this.item_handler.expand_all(true);
+        });
+    }
+
+    private register_expand_all_off() {
+        return vscode.commands.registerCommand(this.cmd_expand_all_off, () => {
+            this.update_switch_context("expand-all-off");
+            this.item_handler.expand_all(false);
+        });
+    }
+
+    //#endregion
+
+    // #region 注册：符号的排序
+    // 其实排序的 -off 命令什么都不需要做啦，但必须要有，否则点击时会报错
+
+    private readonly cmd_sort_by_position = "cure-outline.sort-by-position";
+    private readonly cmd_sort_by_position_off = "cure-outline.sort-by-position-off";
+
+    private register_sort_by_position() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_position, () => {
+            this.update_sort_context("position");
+            this.provider.sort_by("position");
+        });
+    }
+
+    private register_sort_by_position_off() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_position_off, () => {});
+    }
+
+    private readonly cmd_sort_by_name = "cure-outline.sort-by-name";
+    private readonly cmd_sort_by_name_off = "cure-outline.sort-by-name-off";
+
+    private register_sort_by_name() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_name, () => {
+            this.update_sort_context("name");
+            this.provider.sort_by("name");
+        });
+    }
+
+    private register_sort_by_name_off() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_name_off, () => {});
+    }
+
+    private readonly cmd_sort_by_kind = "cure-outline.sort-by-kind";
+    private readonly cmd_sort_by_kind_off = "cure-outline.sort-by-kind-off";
+
+    private register_sort_by_kind() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_kind, () => {
+            this.update_sort_context("kind");
+            this.provider.sort_by("kind");
+        });
+    }
+
+    private register_sort_by_kind_off() {
+        return vscode.commands.registerCommand(this.cmd_sort_by_kind_off, () => {});
+    }
+
+    //#endregion
+
+    // //#region 符号的过滤
+
+    // public static readonly cmd_filter_no_local_var = "cure-outline.filter-no-local-var";
+
+    // private _cmd_filter_no_local_var() {
+    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_filter_no_local_var, () =>
+    //         this.provider.filter_by("no_local_var")
+    //     );
+    // }
+
+    // public static readonly cmd_filter_no_global_var = "cure-outline.filter-no-global-var";
+
+    // private _cmd_filter_no_global_var() {
+    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_filter_no_global_var, () =>
+    //         this.provider.filter_by("no_global_var")
+    //     );
+    // }
+
+    // //#endregion
+
+    // //#region 注册事件-follow-by-cursor
+
+    // public static readonly cmd_follow_by_cursor = "cure-outline.follow-by-cursor";
+
+    // /** 根据行、列，查找距离它最近的 tree item
+    //  * - 如果 line、col 正好在某个 tree item 的位置，则返回该 item
+    //  * - 否则，返回距离它最近的两个 item，向上、向下一个，说明它在两个 item 之间
+    //  * @returns 返回数组
+    //  * - 只有一个元素，则说明位于该 item 中
+    //  * - 有两个元素，则说明位于两个 item 之间
+    //  * - 没有元素
+    //  */
+    // private get_closer_item(
+    //     _items: CureSymbolTreeItem[],
+    //     range: vscode.Range
+    // ): CureSymbolTreeItem[] {
+    //     // 需要先对 items 进行复制，然后按位置排序
+    //     // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
+    //     const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
+
+    //     /** 向上看，最靠近的 item */
+    //     let up_closer_item: CureSymbolTreeItem = items[0];
+    //     /** 向下看，最靠近的 item */
+    //     let down_closer_item: CureSymbolTreeItem = items[items.length - 1];
+
+    //     // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
+    //     if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
+    //         return [];
+    //     }
+
+    //     for (const item of items) {
+    //         // 这说明在 item 的内部！
+    //         if (item.is_contains(range, false)) {
+    //             // 继续向下查看是在哪个子元素中
+    //             if (item.Children.length > 0) {
+    //                 const sub_result = this.get_closer_item(item.Children, range);
+    //                 return sub_result.length === 0 ? [item] : sub_result;
+    //             }
+    //             return [item];
+    //         }
+    //         // 更新最靠近的 item 咯
+    //         else {
+    //             // 更新向上看最靠近的 item
+    //             // 如果它在 target 前面、在 up_closer_item 后面，则更新 up_closer_item
+    //             if (item.is_before(range) && item.is_after(up_closer_item)) {
+    //                 up_closer_item = item;
+    //             }
+
+    //             // 更新向下看最靠近的 item
+    //             if (item.is_after(range) && item.is_before(down_closer_item)) {
+    //                 down_closer_item = item;
+    //             }
+    //         }
+    //     }
+
+    //     return up_closer_item.euqal(down_closer_item)
+    //         ? [up_closer_item]
+    //         : [up_closer_item, down_closer_item];
+    // }
+
+    // /** 存储上一次最近的 item，如果光标还在这个范围，则可以避免多余的查询 */
+    // private last_closer_item: CureSymbolTreeItem[] = [];
+
+    // /** 返回 true 表示更新了 */
+    // private update_closer_item(items: CureSymbolTreeItem[]) {
+    //     let result = true;
+    //     if (items.length === this.last_closer_item.length) {
+    //         const equal =
+    //             items[0]?.euqal(this.last_closer_item[0]) &&
+    //             items[1]?.euqal(this.last_closer_item[1]);
+    //         result = !equal;
+    //     }
+    //     if (result) {
+    //         this.last_closer_item = items;
+    //     }
+    //     return result;
+    // }
+
+    // // #cure-warn 编辑文档时，会更新符号，然后才能高亮
+    // // 现在的实现上，会有一个【闪烁】
+    // // 考虑：读取【follow by cursor】配置项，在获取树节点时，从而可以更新它们的折叠状态
+    // // 等更新完状态之后，再执行【高亮】？但当前的高亮会强制切换到 outline view 上
+    // public follow_cursor(editor: vscode.TextEditor) {
+    //     const position = editor.selection.active;
+    //     const line = position.line;
+    //     const col = position.character;
+    //     const closer_item = this.get_closer_item(
+    //         this.provider.Items,
+    //         new vscode.Range(line, col, line, col)
+    //     );
+
+    //     if (this.update_closer_item(closer_item)) {
+    //         if (closer_item.length === 1) {
+    //             this.highlight_item(closer_item[0]);
+    //         } else if (closer_item.length === 2) {
+    //         }
+    //     }
+    // }
+
+    // private _cmd_follow_by_cursor() {
+    //     const debounce_func = debounce_sync(this.follow_cursor.bind(this), 500);
+
+    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_follow_by_cursor, () => {
+    //         // #cure-warn 默认启用之后无法关闭嘿嘿
+    //         // 监听当前文档中、鼠标的位置
+    //         vscode.window.onDidChangeTextEditorSelection((e) => {
+    //             debounce_func(e.textEditor);
+    //         });
+    //     });
+    // }
+
+    // //#endregion
+}
