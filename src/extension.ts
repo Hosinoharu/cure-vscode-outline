@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
+import * as cmds from "./cmds";
+import { ol_provider, ol_view } from "./outline";
 
-export function activate(context: vscode.ExtensionContext) {}
+export function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push(ol_view);
+
+    cmds.register_all_cmds(context, ol_provider, ol_view);
+}
 
 export function deactivate() {}

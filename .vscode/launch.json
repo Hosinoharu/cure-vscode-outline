@@ -6,7 +6,7 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension",
+			"name": "Compile And Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
@@ -17,6 +17,18 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"name": "Run Extension Again",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--folder-uri=file:///${workspaceFolder}/languages"
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			]
 		}
 	]
 }

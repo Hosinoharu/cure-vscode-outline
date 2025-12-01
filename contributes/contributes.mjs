@@ -183,7 +183,6 @@ export default {
                 id: "cure-outline",
                 name: "Cure Outline",
                 icon: "icons/icon-24.png",
-                type: "webview",
             },
         ],
     },
