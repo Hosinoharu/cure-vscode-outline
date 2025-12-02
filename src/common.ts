@@ -12,10 +12,10 @@ import { TreeItemType } from "./types/symbol";
  * @param wait 等待时间(毫秒)
  * @returns 包装后的防抖函数
  */
-export function debounce<T extends (...args: any[]) => void>(
+export function debounce<T extends (...args: any[]) => Promise<void>>(
     func: T,
     wait: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) => Promise<void> {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     return async function (...args: Parameters<T>) {
