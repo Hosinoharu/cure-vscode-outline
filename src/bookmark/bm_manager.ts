@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { CureOneSymbol } from "../symbol";
 import { BookmarkCategory } from "../types/symbol";
+import { bookmark_gutter_icon } from "../assets";
 
 /** 管理书签。单例模式 */
 export class CureBookmarkManager {
@@ -47,6 +48,8 @@ export class CureBookmarkManager {
         }
     }
 
+    //#region 操作书签
+
     /** 添加一个书签 */
     public add(type: BookmarkCategory, symbol: CureOneSymbol) {
         this.category[type].push(symbol);
@@ -61,6 +64,13 @@ export class CureBookmarkManager {
         }
     }
 
+    /** 保存书签到本地咯 */
+    public async save() {}
+
+    //#endregion
+
+    //#region 解析自定义书签
+
     /** 解析出自定义标签的正则，直接读取 #cure-xx 后面 xx 的所有内容 */
     private readonly cutstom_format = /#cure-(.*)/;
 
@@ -70,18 +80,12 @@ export class CureBookmarkManager {
      *
      * @return true 表示解析成功，false 表示解析失败
      */
-    public async update_file(uri: vscode.Uri, content?: string) {
-        let lines: string[] = [];
-        if (content) {
-            lines = content.split("\n");
-        } else {
-            try {
-                lines = (await vscode.workspace.fs.readFile(uri)).toString().split("\n");
-            } catch (e) {
-                vscode.window.showErrorMessage("Bookmark Manager: read file failed");
-                return false;
-            }
+    public async update_file(uri: vscode.Uri, content: string) {
+        if (vscode.window.activeTextEditor?.document.uri.fsPath !== uri.fsPath) {
+            return false;
         }
+
+        const lines = content.split("\n");
         // 不需要判断是否为注释之类的情况，反正是我自己用
         const result: CureOneSymbol[] = [];
         for (let i = 0; i < lines.length; i++) {
@@ -94,11 +98,31 @@ export class CureBookmarkManager {
             const col = match.index || 0;
             const symbol = CureOneSymbol.from_custom_bookmark(uri, name, i, col);
             result.push(symbol);
+
+            this.add_gutter_icon(i);
         }
         this.category["custom"] = result;
         return true;
     }
 
-    /** 保存书签到本地咯 */
-    public async save() {}
+    /** 记录指定位置的行首 gutter icon  */
+    private decoration_location: Map<number, vscode.TextEditorDecorationType> = new Map();
+
+    /** 解析出一个标签后，在它的行首添加一个 icon 标记咯 */
+    private add_gutter_icon(line: number) {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || this.decoration_location.has(line)) {
+            return;
+        }
+
+        const decoration = vscode.window.createTextEditorDecorationType({
+            gutterIconPath: bookmark_gutter_icon,
+            gutterIconSize: "contain",
+        });
+        const range = new vscode.Range(line, 0, line, 0);
+        editor.setDecorations(decoration, [range]);
+        this.decoration_location.set(line, decoration);
+    }
+
+    //#endregion
 }
