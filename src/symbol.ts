@@ -337,15 +337,16 @@ export class CureSymbolCMD {
     private register_locate() {
         return vscode.commands.registerCommand(
             this.cmd_locate,
-            async (symbol: CureOneSymbol, callback?: () => void) => {
+            async (symbol: CureOneSymbol, callback?: () => Promise<void>) => {
                 // 打开文档
                 try {
+                    await callback?.();
+
                     const editor = await vscode.window.showTextDocument(symbol.uri);
                     // 定位到指定位置，并且高亮所在位置
                     const range = symbol.selection_range;
                     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
                     editor.selection = new vscode.Selection(range.start, range.end);
-                    callback?.();
                 } catch (e: any) {
                     vscode.window.showErrorMessage("open file failed:" + e.message);
                     return;
@@ -354,8 +355,13 @@ export class CureSymbolCMD {
         );
     }
 
-    /** 创建符号跳转的命令。指定符号、以及触发点击时的操作 */
-    public create_locate(symbol: CureOneSymbol, callback?: () => void): vscode.Command {
+    /** 创建符号跳转的命令。指定符号、以及**触发点击之前**的操作
+     *
+     * ## 为什么要设定为触发点击之前，而不是点击之后呢？
+     * 因为现在实现 tree item 点击并居中时，会丢失编辑器中的焦点，聚焦到 tree item 上，
+     * 所以需要提前执行，然后定位到编辑器中才行啦！
+     */
+    public create_locate(symbol: CureOneSymbol, callback?: () => Promise<void>): vscode.Command {
         return {
             title: "locate",
             command: this.cmd_locate,

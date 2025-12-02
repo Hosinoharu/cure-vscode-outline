@@ -43,9 +43,9 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         item.iconPath = symbol.Icon;
         // #cure-warn 实现符号的点击
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
-        // 添加 command 后，点击时不再会自动展开了
-        item.command = CureSymbolCMD.Instance.create_locate(symbol, () => {
-            //
+        // 添加 command 后，点击时不再会自动展开了，所以需要手动处理
+        item.command = CureSymbolCMD.Instance.create_locate(symbol, async () => {
+            await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
         item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
         // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
@@ -102,7 +102,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     }
 
     /** 判断两个 item 是否相等 */
-    public euqal(other: CureSymbolTreeItem) {
+    public equal(other: CureSymbolTreeItem) {
         return this.UniqueId === other.UniqueId;
     }
 
@@ -428,19 +428,21 @@ export class CureSymbolTreeItemHandler {
         //
         // 上面造成的【展开与折叠】并不能修改 item.collapsibleState 值
         // 也就是说 collapsibleState 只能确定【初次渲染】时折叠的状态
-        view.onDidExpandElement((e) => {
-            console.log("expand:", e.element.label);
-        });
-        view.onDidCollapseElement((e) => {
-            console.log("collapse:", e.element.label);
-        });
+        //
+        // ！！！不能在这里修改 item.collapsibleState 值，否则完全无法精确控制！
+        // view.onDidExpandElement((e) => {
+        //     console.log("expand:", e.element.label);
+        // });
+        // view.onDidCollapseElement((e) => {
+        //     console.log("collapse:", e.element.label);
+        // });
 
         // 当点击 item 时会触发，似乎可以替代【点击 item 时的事件】
         // 但重复点击时当然是不会重复触发的啦！
-        view.onDidChangeSelection((e) => {
-            // 开启多选之后，就会有多个元素了
-            console.log("selection:", e.selection[0].label);
-        });
+        // view.onDidChangeSelection((e) => {
+        //     // 开启多选之后，就会有多个元素了
+        //     console.log("selection:", e.selection[0].label);
+        // });
     }
 
     //#region 折叠与展开一个 tree item
@@ -449,12 +451,21 @@ export class CureSymbolTreeItemHandler {
         根据我的目标：
         - 点击 item 时要展开它，再次点击折叠它
         - 同级别只能展开一个 item
+
+        所以需要【详细控制每个 tree item】的折叠状态并及时刷新它们的展示，
+        经过测试，使用 view.reveal API 是无法实现折叠的，只能展开，所以我只用它来进行【居中显示】
+
+        所以，当展开一个 item 时，这样做：
+        - 修改它的折叠状态为 true（展开中），刷新 ui
+        - 折叠它的子项，刷新 ui
+        - 折叠它的同层级项，刷新 ui
+        - 居中显示它
     */
 
     /** 修改 item 的折叠状态
      * - 如果原来没有折叠状态，则返回 false
      * - 如果真的修改了状态，则返回 true
-     * - 如果展开它，则可以控制是折叠 child item 还是不操作
+     * - 如果展开它，则可以控制是折叠一层 child item 还是不操作保持原样
      *
      * @param refhresh 为 true 则立即刷新，否则需要手续手动刷新
      * @param collapse_child 如果当前为展开状态，那么为 true 则折叠所有子元素，否则为 false 则不操作子元素
@@ -466,18 +477,17 @@ export class CureSymbolTreeItemHandler {
         collapse_child?: boolean
     ) {
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.None) {
-            return;
+            return false;
         }
 
         const ok = item.set_collapsible_state(expand);
         if (expand && collapse_child && ok) {
+            // 不递归调用，仅处理一层子项
             item.Children.forEach((v) => {
-                // 不递归调用，仅处理一层
-                if (v.Children.length > 0) {
-                    v.set_collapsible_state(false);
-                }
+                v.Children.length > 0 && v.set_collapsible_state(false);
             });
         }
+        // 在这里刷新 item 时会同时刷新子项啦
         ok && refresh && this.provider.refresh(item);
         return ok;
     }
@@ -486,28 +496,27 @@ export class CureSymbolTreeItemHandler {
      *
      * 其问题如下，均由于 `view.reveal API` 的限制：
      * - 不能让元素居中（指的是在 tree view 垂直居中）
-     * - 如果强制居中会丢失其它地方焦点，比如编辑文档时丢失光标
+     * - 如果强制居中会丢失其它地方焦点，比如编辑文档时丢失光标 —— 当然点击 item 时就不会这么突兀
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
-    public expand_only_one(item: CureSymbolTreeItem) {
-        // const is_expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
-        // const ok = this.set_expand_state(item, !is_expand, true, false);
-        // 让该 item 展示在视图的中间！
-        // 因为本函数只在点击 item 时触发，所以问题不大哟
-        // #cure-后续监听【expand、collapse】事件，动态修改它们的折叠状态？？
-        // 不然，reveal 只能展开无法折叠的！
-        this.view.reveal(item, { focus: true, expand: true });
+    public async expand_only_one(item: CureSymbolTreeItem) {
+        const is_expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
+        const is_none = item.collapsibleState === vscode.TreeItemCollapsibleState.None;
+        const ok = this.set_expand_state(item, !is_expand, true);
 
-        // 现在要展开它，则需要关闭其它展开的 —— 注意，是关闭同级别展开的哟
-        // if (ok && !is_expand) {
-        //     // 有父元素，则关闭同级别，否则就是根元素咯
-        //     const targets = item.parent?.Children ?? this.provider.Items;
-        //     targets.forEach((v) => {
-        //         if (!v.euqal(item)) {
-        //             this.set_expand_state(v, false, true);
-        //         }
-        //     });
-        // }
+        // 现在要展开它，则需要关闭同级别展开的哟
+        if (is_none || (ok && !is_expand)) {
+            const others = item.parent?.Children ?? this.provider.Items;
+            others.forEach((v) => {
+                !v.equal(item) && this.set_expand_state(v, false, false);
+            });
+            // 这里统一刷新
+            const refresh_target = others === this.provider.Items ? undefined : item.parent;
+            this.provider.refresh(refresh_target);
+        }
+
+        // 启用 focus 可以让该 item 展示在视图的中间
+        await this.view.reveal(item, { focus: true });
     }
 
     /** 在 follow cursor 时，只高亮一个 item，其它的全部关闭！ */
@@ -521,14 +530,14 @@ export class CureSymbolTreeItemHandler {
 
         // 现在 parent 已经到了顶层了，所以关闭顶层的
         this.provider.Items.forEach((v) => {
-            if (!v.euqal(parent)) {
+            if (!v.equal(parent)) {
                 this.set_expand_state(v, false, true);
             }
         });
 
         // 关闭同层级的
         item.parent?.Children.forEach((v) => {
-            if (!v.euqal(item)) {
+            if (!v.equal(item)) {
                 this.set_expand_state(v, false, false);
             }
         });
