@@ -8,6 +8,8 @@ export const ol_manager = CureSymbolManager.Instance;
 export const ol_provider = new CureSymbolTreeProvider(ol_manager);
 export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
     treeDataProvider: ol_provider,
+    // 自带的这个全部折叠不行，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
+    // showCollapseAll: true,
 });
 
 async function update_symbol(uri: vscode.Uri) {

@@ -337,10 +337,13 @@ export class CureSymbolTreeViewCMD {
 
         if (this.update_closer_item(closer_item)) {
             if (closer_item.length === 1) {
-                console.log("follow_cursor:", closer_item[0].label);
+                // console.log("follow_cursor:", closer_item[0].label);
                 this.item_handler.highlight_item(closer_item[0]);
             } else if (closer_item.length === 2) {
-                console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
+                // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
+                // 只能高亮一个！！！
+                // this.item_handler.highlight_item(closer_item[0]);
+                // this.item_handler.highlight_item(closer_item[1]);
             }
         }
     }
