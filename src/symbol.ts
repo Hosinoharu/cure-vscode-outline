@@ -307,14 +307,17 @@ export class CureSymbolCMD {
     private static instance?: CureSymbolCMD;
 
     private constructor() {
+        if (CureSymbolCMD.instance) {
+            throw new Error("CureSymbolCMD is already initialized!");
+        }
         CureSymbolCMD.instance = this;
     }
 
     public static get Instance() {
-        if (!CureSymbolCMD.instance) {
+        if (!this.instance) {
             throw new Error("CureSymbolCMD is not initialized!");
         }
-        return CureSymbolCMD.instance;
+        return this.instance;
     }
 
     /** 注册所有此类的命令 */

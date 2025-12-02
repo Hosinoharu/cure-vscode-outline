@@ -17,16 +17,20 @@ export class CureSymbolTreeViewCMD {
         private readonly provider: CureSymbolTreeProvider,
         private readonly view: vscode.TreeView<CureSymbolTreeItem>
     ) {
+        if (CureSymbolTreeViewCMD.instance) {
+            throw new Error("CureTreeViewCMD is already initialized!");
+        }
         CureSymbolTreeViewCMD.instance = this;
-        this.item_handler = new CureSymbolTreeItemHandler(provider, view);
+        CureSymbolTreeItemHandler.register(provider, view);
+        this.item_handler = CureSymbolTreeItemHandler.Instance;
     }
 
     /** 获取单例 */
     public static get Instance() {
-        if (!CureSymbolTreeViewCMD.instance) {
+        if (!this.instance) {
             throw new Error("CureTreeViewCMD is not initialized!");
         }
-        return CureSymbolTreeViewCMD.instance;
+        return this.instance;
     }
 
     /** 注册所有此类的命令 */
