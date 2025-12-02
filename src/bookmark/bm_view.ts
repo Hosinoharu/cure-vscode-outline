@@ -8,7 +8,6 @@ import crypto from "crypto";
 import { BookmarkCategory, TreeItemType } from "../types/symbol";
 import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureBookmarkManager } from "./bm_manager";
-import type { CureSymbolTreeItem } from "../outline/ol_view";
 import { set_context_value } from "../common";
 
 /** 表示 bookmark tree view 的 item */
@@ -181,8 +180,6 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
 
     constructor(manager: CureBookmarkManager) {
         this.manager = manager;
-        // 此处触发 getter 初始化数据，否则后续【添加书签】时，会找不到 symbol
-        this.Items;
     }
 
     // #region 处理tree_item

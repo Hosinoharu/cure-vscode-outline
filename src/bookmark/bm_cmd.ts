@@ -37,6 +37,7 @@ export class CureBookmarkTreeViewCMD {
     ) {
         const self = new CureBookmarkTreeViewCMD(provider, view);
         const commands = [
+            self.register_reload_bookmark(),
             self.register_add_symbol_to_bookmark(),
             self.register_del_bookmark(),
             self.register_rename_bookmark(),
@@ -44,6 +45,21 @@ export class CureBookmarkTreeViewCMD {
         ctx.subscriptions.push(...commands);
         return self;
     }
+
+    //#region 注册：重新加载当前文件的自定义书签
+
+    private readonly cmd_reload_bookmark = "cure-outline.reload-bookmark";
+
+    private register_reload_bookmark() {
+        return vscode.commands.registerCommand(this.cmd_reload_bookmark, () => {
+            const doc = vscode.window.activeTextEditor?.document;
+            if (doc) {
+                this.provider.reload_bookmark(doc.uri, doc.getText());
+            }
+        });
+    }
+
+    //#endregion
 
     // #region 注册：将某个符号添加到bookmark
 

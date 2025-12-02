@@ -3,7 +3,7 @@ const get_menus = (items) => items.map((item) => item.menu);
 const create_result = (items) => ({ cmd: get_cmds(items), menu: get_menus(items) });
 
 // 重新加载符号
-const reload = {
+const reload_symbol = {
     cmd: [
         {
             command: "cure-outline.reload-symbol",
@@ -15,6 +15,23 @@ const reload = {
         {
             command: "cure-outline.reload-symbol",
             when: "view == cure-outline",
+            group: "navigation@1",
+        },
+    ],
+};
+// 重新加载自定义书签
+const reload_bookmark = {
+    cmd: [
+        {
+            command: "cure-outline.reload-bookmark",
+            title: "Reload Current File Bookmark",
+            icon: "$(refresh)",
+        },
+    ],
+    menu: [
+        {
+            command: "cure-outline.reload-bookmark",
+            when: "view == cure-outline-bookmark",
             group: "navigation@1",
         },
     ],
@@ -259,7 +276,8 @@ const view_item_context = (() => {
 // ==========================
 
 const commands = [
-    ...reload.cmd,
+    ...reload_symbol.cmd,
+    ...reload_bookmark.cmd,
     ...expand.cmd,
     ...sort.cmd,
     ...filter.cmd,
@@ -267,7 +285,13 @@ const commands = [
 ];
 
 const menus = {
-    "view/title": [...reload.menu, ...expand.menu, ...sort.menu, ...filter.menu],
+    "view/title": [
+        ...reload_symbol.menu,
+        ...reload_bookmark.menu,
+        ...expand.menu,
+        ...sort.menu,
+        ...filter.menu,
+    ],
     "view/item/context": [...view_item_context.menu],
 };
 

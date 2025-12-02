@@ -19,6 +19,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "cure-outline.reload-bookmark",
+        "title": "Reload Current File Bookmark",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "cure-outline.expand-all",
         "title": "Expand All",
         "icon": "$(expand-all)"
@@ -116,6 +121,11 @@
         {
           "command": "cure-outline.reload-symbol",
           "when": "view == cure-outline",
+          "group": "navigation@1"
+        },
+        {
+          "command": "cure-outline.reload-bookmark",
+          "when": "view == cure-outline-bookmark",
           "group": "navigation@1"
         },
         {
