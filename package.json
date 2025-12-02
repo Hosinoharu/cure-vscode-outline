@@ -54,6 +54,24 @@
         "command": "cure-outline.sort-by-kind-off",
         "title": "✔ Sort By Kind",
         "icon": "$(check)"
+      },
+      {
+        "command": "cure-outline.filter-no-local-var",
+        "title": "No Local Var"
+      },
+      {
+        "command": "cure-outline.filter-no-local-var-off",
+        "title": "✔ No Local Var",
+        "icon": "$(check)"
+      },
+      {
+        "command": "cure-outline.filter-no-global-var",
+        "title": "No Global Var"
+      },
+      {
+        "command": "cure-outline.filter-no-global-var-off",
+        "title": "✔ No Global Var",
+        "icon": "$(check)"
       }
     ],
     "viewsContainers": {
@@ -120,6 +138,26 @@
           "command": "cure-outline.sort-by-kind-off",
           "when": "view == cure-outline && cure-outline-is-sort-by-kind",
           "group": "sort@3"
+        },
+        {
+          "command": "cure-outline.filter-no-local-var",
+          "when": "view == cure-outline && !cure-outline-is-filter-no-local-var",
+          "group": "filter@1"
+        },
+        {
+          "command": "cure-outline.filter-no-local-var-off",
+          "when": "view == cure-outline && cure-outline-is-filter-no-local-var",
+          "group": "filter@1"
+        },
+        {
+          "command": "cure-outline.filter-no-global-var",
+          "when": "view == cure-outline && !cure-outline-is-filter-no-global-var",
+          "group": "filter@2"
+        },
+        {
+          "command": "cure-outline.filter-no-global-var-off",
+          "when": "view == cure-outline && cure-outline-is-filter-no-global-var",
+          "group": "filter@2"
         }
       ]
     }

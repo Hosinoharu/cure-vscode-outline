@@ -50,7 +50,14 @@ type ExpandCmdType = Expandype | `${Expandype}-off`;
 /** 排序命令，只能选一个 */
 type SortCmdType = `sort-by-${OutlineSortType}` | `sort-by-${OutlineSortType}-off`;
 
+/** 过滤命令
+ *  - `filter-no-local-var`：过滤掉局部变量
+ *  - `filter-no-global-var`：过滤掉全局变量
+ */
+type FilterType = "filter-no-local-var" | "filter-no-global-var";
+type FilterCmdType = FilterType | `${FilterType}-off`;
+
 /** 开关类命令，具备【on、off】两个命令哟 */
-type SwitchCmdType = ExpandCmdType | SortCmdType;
+type SwitchCmdType = ExpandCmdType | SortCmdType | FilterCmdType;
 
 //#endregion

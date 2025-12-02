@@ -156,14 +156,71 @@ const sort = (() => {
     ]);
 })();
 
+// 过滤
+const filter = (() => {
+    const filter_no_local_var = {
+        cmd: {
+            command: "cure-outline.filter-no-local-var",
+            title: "No Local Var",
+        },
+        menu: {
+            command: "cure-outline.filter-no-local-var",
+            when: "view == cure-outline && !cure-outline-is-filter-no-local-var",
+            group: "filter@1",
+        },
+    };
+    const filter_no_local_var_off = {
+        cmd: {
+            command: "cure-outline.filter-no-local-var-off",
+            title: "✔ No Local Var",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.filter-no-local-var-off",
+            when: "view == cure-outline && cure-outline-is-filter-no-local-var",
+            group: "filter@1",
+        },
+    };
+    const filter_no_global_var = {
+        cmd: {
+            command: "cure-outline.filter-no-global-var",
+            title: "No Global Var",
+        },
+        menu: {
+            command: "cure-outline.filter-no-global-var",
+            when: "view == cure-outline && !cure-outline-is-filter-no-global-var",
+            group: "filter@2",
+        },
+    };
+    const filter_no_global_var_off = {
+        cmd: {
+            command: "cure-outline.filter-no-global-var-off",
+            title: "✔ No Global Var",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.filter-no-global-var-off",
+            when: "view == cure-outline && cure-outline-is-filter-no-global-var",
+            group: "filter@2",
+        },
+    };
+
+    return create_result([
+        filter_no_local_var,
+        filter_no_local_var_off,
+        filter_no_global_var,
+        filter_no_global_var_off,
+    ]);
+})();
+
 // ==========================
 //         整合各命令
 // ==========================
 
-const commands = [...reload.cmd, ...expand.cmd, ...sort.cmd];
+const commands = [...reload.cmd, ...expand.cmd, ...sort.cmd, ...filter.cmd];
 
 const menus = {
-    "view/title": [...reload.menu, ...expand.menu, ...sort.menu],
+    "view/title": [...reload.menu, ...expand.menu, ...sort.menu, ...filter.menu],
 };
 
 export default {

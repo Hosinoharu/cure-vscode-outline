@@ -56,6 +56,12 @@ export class CureSymbolTreeViewCMD {
 
             self.register_sort_by_kind(),
             self.register_sort_by_kind_off(),
+
+            self.register_filter_no_local_var(),
+            self.register_filter_no_local_var_off(),
+
+            self.register_filter_no_global_var(),
+            self.register_filter_no_global_var_off(),
         ];
         ctx.subscriptions.push(...commands);
         return self;
@@ -196,25 +202,43 @@ export class CureSymbolTreeViewCMD {
 
     //#endregion
 
-    // //#region 符号的过滤
+    //#region 注册：符号的过滤
 
-    // public static readonly cmd_filter_no_local_var = "cure-outline.filter-no-local-var";
+    private readonly cmd_filter_no_local_var = "cure-outline.filter-no-local-var";
+    private readonly cmd_filter_no_local_var_off = "cure-outline.filter-no-local-var-off";
 
-    // private _cmd_filter_no_local_var() {
-    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_filter_no_local_var, () =>
-    //         this.provider.filter_by("no_local_var")
-    //     );
-    // }
+    private register_filter_no_local_var() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_local_var, () => {
+            this.update_switch_context("filter-no-local-var");
+            this.provider.filter_by("no_local_var");
+        });
+    }
 
-    // public static readonly cmd_filter_no_global_var = "cure-outline.filter-no-global-var";
+    private register_filter_no_local_var_off() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_local_var_off, () => {
+            this.update_switch_context("filter-no-local-var-off");
+            this.provider.filter_by("no_local_var");
+        });
+    }
 
-    // private _cmd_filter_no_global_var() {
-    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_filter_no_global_var, () =>
-    //         this.provider.filter_by("no_global_var")
-    //     );
-    // }
+    private readonly cmd_filter_no_global_var = "cure-outline.filter-no-global-var";
+    private readonly cmd_filter_no_global_var_off = "cure-outline.filter-no-global-var-off";
 
-    // //#endregion
+    private register_filter_no_global_var() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_global_var, () => {
+            this.update_switch_context("filter-no-global-var");
+            this.provider.filter_by("no_global_var");
+        });
+    }
+
+    private register_filter_no_global_var_off() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_global_var_off, () => {
+            this.update_switch_context("filter-no-global-var-off");
+            this.provider.filter_by("no_global_var");
+        });
+    }
+
+    //#endregion
 
     // //#region 注册事件-follow-by-cursor
 
