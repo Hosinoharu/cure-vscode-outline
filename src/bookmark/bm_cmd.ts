@@ -85,7 +85,8 @@ export class CureBookmarkTreeViewCMD {
                     placeHolder: "Enter new name for bookmark",
                 });
                 if (new_name) {
-                    item.label = new_name;
+                    // 给其前面加一个标记，说明被修改过了
+                    item.label = "✨ " + new_name;
                     this.provider.refresh(item);
                 }
             }
