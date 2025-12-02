@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import crypto from "crypto";
-import { CureOneSymbol } from "../symbol";
+import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureSymbolManager } from "./ol_manager";
 // import { CureSymbolCMD, CureSymbolTreeViewCMD } from "./ol_cmd";
 import { OutlineFilterType, OutlineSortType, TreeItemType } from "../types/symbol";
@@ -26,6 +26,10 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     public get UniqueId() {
         return this.symbol.id;
     }
+    /** 获取该 tree item 的 tooltips */
+    public get Tooltip() {
+        return this.symbol.Comment || this.symbol.name;
+    }
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -39,11 +43,11 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         item.iconPath = symbol.Icon;
         // #cure-warn 实现符号的点击
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
-        // item.command = CureSymbolCMD.create_cmd_locate(symbol, () => {
-        //     CureSymbolTreeViewCMD.get_instance().toggle_item_expand(item);
+        // item.command = CureSymbolCMD.Instance.create_locate(symbol, () => {
+        // CureSymbolTreeViewCMD.get_instance().toggle_item_expand(item);
         // });
         item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
-        item.tooltip = symbol.Comment || symbol.name;
+        // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();
         return item;
@@ -245,6 +249,18 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         return element.parent;
     }
 
+    resolveTreeItem(
+        item: vscode.TreeItem,
+        element: CureSymbolTreeItem,
+        token: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.TreeItem> {
+        // 因为获取符号上面的注释会增加消耗，且不是所有符号都会被查看 tooltips
+        // 所以将其的获取放到这里，而不是在创建 item 的时候
+        console.log("resolveTreeItem:", item.label);
+        item.tooltip = element.Tooltip;
+        return item;
+    }
+
     //#region 过滤
 
     /** 返回 true 表示 element 满足过滤条件！ */
@@ -377,7 +393,9 @@ export class CureSymbolTreeItemHandler {
     constructor(
         private readonly provider: CureSymbolTreeProvider,
         private readonly view: vscode.TreeView<CureSymbolTreeItem>
-    ) {}
+    ) {
+        view.onDidChangeVisibility((e) => {});
+    }
 
     //#region 折叠与展开一个 tree item
 
