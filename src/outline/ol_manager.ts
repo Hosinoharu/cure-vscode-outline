@@ -6,6 +6,9 @@ export class CureSymbolManager {
     private static instance?: CureSymbolManager;
 
     private constructor() {
+        if (CureSymbolManager.instance) {
+            throw new Error("CureSymbolManager is already initialized!");
+        }
         CureSymbolManager.instance = this;
     }
 
