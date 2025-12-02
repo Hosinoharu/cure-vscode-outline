@@ -72,6 +72,20 @@
         "command": "cure-outline.filter-no-global-var-off",
         "title": "✔ No Global Var",
         "icon": "$(check)"
+      },
+      {
+        "command": "cure-outline.add-symbol-to-bookmark",
+        "title": "Add Bookmark"
+      },
+      {
+        "command": "cure-outline.rename-bookmark",
+        "title": "Rename",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "cure-outline.del-bookmark",
+        "title": "Delete",
+        "icon": "$(close)"
       }
     ],
     "viewsContainers": {
@@ -88,6 +102,11 @@
         {
           "id": "cure-outline",
           "name": "Cure Outline",
+          "icon": "icons/icon-24.png"
+        },
+        {
+          "id": "cure-outline-bookmark",
+          "name": "Cure Bookmark",
           "icon": "icons/icon-24.png"
         }
       ]
@@ -158,6 +177,22 @@
           "command": "cure-outline.filter-no-global-var-off",
           "when": "view == cure-outline && cure-outline-is-filter-no-global-var",
           "group": "filter@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cure-outline.add-symbol-to-bookmark",
+          "when": "view == cure-outline"
+        },
+        {
+          "command": "cure-outline.rename-bookmark",
+          "group": "inline@1",
+          "when": "view == cure-outline-bookmark && viewItem == bookmark_item"
+        },
+        {
+          "command": "cure-outline.del-bookmark",
+          "group": "inline@2",
+          "when": "view == cure-outline-bookmark && viewItem == bookmark_item"
         }
       ]
     }
