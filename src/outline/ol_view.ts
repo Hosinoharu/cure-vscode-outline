@@ -524,7 +524,7 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
-    public highlight_item(item: CureSymbolTreeItem) {
+    public async highlight(item: CureSymbolTreeItem) {
         if (!this.visible) {
             return;
         }
@@ -534,13 +534,6 @@ export class CureSymbolTreeItemHandler {
             this.set_expand_state(parent.parent, true, false);
             parent = parent.parent;
         }
-
-        // 现在 parent 已经到了顶层了，那么再折叠其它顶层的 item 并立即刷新
-        this.provider.Items.forEach((v) => {
-            if (!v.equal(parent)) {
-                this.set_expand_state(v, false, true);
-            }
-        });
 
         // 关闭同层级的，不需要刷新 ui
         item.parent?.Children.forEach((v) => {
@@ -554,12 +547,18 @@ export class CureSymbolTreeItemHandler {
         // 刷新最顶层的父元素 ui，实现展开！
         this.provider.refresh(parent);
 
+        // 下面的这个循环正好给上面的【刷新】留下了时间，否则后续高亮特定元素时会失败（没有高亮效果）
+
+        // 现在 parent 已经到了顶层了，那么再折叠其它顶层的 item 并立即刷新
+        this.provider.Items.forEach((v) => {
+            if (!v.equal(parent)) {
+                this.set_expand_state(v, false, true);
+            }
+        });
+
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
         // 所以在当前函数顶部【判断视图是否可见】
-        // 另外，上面的刷新父元素 ui 需要一点时间，为了让最终可以高亮 item 得延迟一会
-        setTimeout(() => {
-            this.view.reveal(item);
-        }, 200);
+        await this.view.reveal(item);
     }
 
     //#endregion

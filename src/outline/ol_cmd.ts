@@ -5,8 +5,8 @@
 
 import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
-import { debounce_sync } from "../common";
-import { OutlineSortType, SortCmdType, SwitchCmdType } from "../types/symbol";
+import { debounce } from "../common";
+import { OutlineSortType, SwitchCmdType } from "../types/symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
 export class CureSymbolTreeViewCMD {
@@ -326,7 +326,7 @@ export class CureSymbolTreeViewCMD {
     // 现在的实现上，会有一个【闪烁】
     // 考虑：读取【follow by cursor】配置项，在获取树节点时，从而可以更新它们的折叠状态
     // 等更新完状态之后，再执行【高亮】？但当前的高亮会强制切换到 outline view 上
-    private follow_cursor(editor: vscode.TextEditor) {
+    private async follow_cursor(editor: vscode.TextEditor) {
         const position = editor.selection.active;
         const line = position.line;
         const col = position.character;
@@ -338,7 +338,7 @@ export class CureSymbolTreeViewCMD {
         if (this.update_closer_item(closer_item)) {
             if (closer_item.length === 1) {
                 // console.log("follow_cursor:", closer_item[0].label);
-                this.item_handler.highlight_item(closer_item[0]);
+                await this.item_handler.highlight(closer_item[0]);
             } else if (closer_item.length === 2) {
                 // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
                 // 只能高亮一个！！！
@@ -351,7 +351,7 @@ export class CureSymbolTreeViewCMD {
     private cancel_follow_cursor?: vscode.Disposable;
 
     private register_follow_cursor() {
-        const debounce_follow_cursor = debounce_sync(this.follow_cursor.bind(this), 500);
+        const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 500);
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
