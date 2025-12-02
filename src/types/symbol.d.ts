@@ -57,7 +57,11 @@ type SortCmdType = `sort-by-${OutlineSortType}` | `sort-by-${OutlineSortType}-of
 type FilterType = "filter-no-local-var" | "filter-no-global-var";
 type FilterCmdType = FilterType | `${FilterType}-off`;
 
+/** 响应编辑器的操作 */
+type FollowType = "follow-cursor";
+type FollowCmdType = FollowType | `${FollowType}-off`;
+
 /** 开关类命令，具备【on、off】两个命令哟 */
-type SwitchCmdType = ExpandCmdType | SortCmdType | FilterCmdType;
+type SwitchCmdType = ExpandCmdType | SortCmdType | FilterCmdType | FollowCmdType;
 
 //#endregion

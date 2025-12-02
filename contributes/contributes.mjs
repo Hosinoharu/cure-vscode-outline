@@ -37,6 +37,35 @@ const reload_bookmark = {
     ],
 };
 
+const follow = (() => {
+    const follow_cursor = {
+        cmd: {
+            command: "cure-outline.follow-cursor",
+            title: "Follow Cursor",
+        },
+        menu: {
+            command: "cure-outline.follow-cursor",
+            when: "view == cure-outline && !cure-outline-is-follow-cursor",
+            // 为了让它位于最上方
+            group: "1_follow",
+        },
+    };
+    const follow_cursor_off = {
+        cmd: {
+            command: "cure-outline.follow-cursor-off",
+            title: "✔ Follow Cursor",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.follow-cursor-off",
+            when: "view == cure-outline && cure-outline-is-follow-cursor",
+            group: "1_follow",
+        },
+    };
+
+    return create_result([follow_cursor, follow_cursor_off]);
+})();
+
 // 展开符号
 const expand = (() => {
     const expand_all = {
@@ -278,6 +307,7 @@ const view_item_context = (() => {
 const commands = [
     ...reload_symbol.cmd,
     ...reload_bookmark.cmd,
+    ...follow.cmd,
     ...expand.cmd,
     ...sort.cmd,
     ...filter.cmd,
@@ -288,6 +318,7 @@ const menus = {
     "view/title": [
         ...reload_symbol.menu,
         ...reload_bookmark.menu,
+        ...follow.menu,
         ...expand.menu,
         ...sort.menu,
         ...filter.menu,

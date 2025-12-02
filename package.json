@@ -24,6 +24,15 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "cure-outline.follow-cursor",
+        "title": "Follow Cursor"
+      },
+      {
+        "command": "cure-outline.follow-cursor-off",
+        "title": "✔ Follow Cursor",
+        "icon": "$(check)"
+      },
+      {
         "command": "cure-outline.expand-all",
         "title": "Expand All",
         "icon": "$(expand-all)"
@@ -127,6 +136,16 @@
           "command": "cure-outline.reload-bookmark",
           "when": "view == cure-outline-bookmark",
           "group": "navigation@1"
+        },
+        {
+          "command": "cure-outline.follow-cursor",
+          "when": "view == cure-outline && !cure-outline-is-follow-cursor",
+          "group": "1_follow"
+        },
+        {
+          "command": "cure-outline.follow-cursor-off",
+          "when": "view == cure-outline && cure-outline-is-follow-cursor",
+          "group": "1_follow"
         },
         {
           "command": "cure-outline.expand-all",

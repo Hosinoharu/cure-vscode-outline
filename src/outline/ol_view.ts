@@ -390,6 +390,9 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
 /** 综合处理一些 Tree View Item 的操作以及给 tree view 添加事件。单例模式 */
 export class CureSymbolTreeItemHandler {
+    /** 记录当前 outline view 是否可见 */
+    private visible = false;
+
     private static instance?: CureSymbolTreeItemHandler;
 
     private constructor(
@@ -417,7 +420,8 @@ export class CureSymbolTreeItemHandler {
 
         // 当切换到其它页面时，就是【隐藏】咯
         view.onDidChangeVisibility((e) => {
-            console.log("visibility changed:", e.visible);
+            // console.log("visibility changed:", e.visible);
+            self.visible = e.visible;
         });
 
         // 可监听以下情况，但无法区分它们：
@@ -519,34 +523,43 @@ export class CureSymbolTreeItemHandler {
         await this.view.reveal(item, { focus: true });
     }
 
-    /** 在 follow cursor 时，只高亮一个 item，其它的全部关闭！ */
-    private highlight_item(item: CureSymbolTreeItem) {
-        // 向上找父元素，依次展开它们
+    /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
+    public highlight_item(item: CureSymbolTreeItem) {
+        if (!this.visible) {
+            return;
+        }
+        // 向上找父元素，依次展开它们，但不刷新 ui
         let parent = item;
         while (parent.parent) {
             this.set_expand_state(parent.parent, true, false);
             parent = parent.parent;
         }
 
-        // 现在 parent 已经到了顶层了，所以关闭顶层的
+        // 现在 parent 已经到了顶层了，那么再折叠其它顶层的 item 并立即刷新
         this.provider.Items.forEach((v) => {
             if (!v.equal(parent)) {
                 this.set_expand_state(v, false, true);
             }
         });
 
-        // 关闭同层级的
+        // 关闭同层级的，不需要刷新 ui
         item.parent?.Children.forEach((v) => {
             if (!v.equal(item)) {
                 this.set_expand_state(v, false, false);
             }
         });
 
-        //再切换它自身的状态
+        //再切换它自身的状态，折叠所有子项
         this.set_expand_state(item, true, false, true);
+        // 刷新最顶层的父元素 ui，实现展开！
         this.provider.refresh(parent);
-        // 该 API 会强制切换到 tree view 上！
-        this.view.reveal(item);
+
+        // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
+        // 所以在当前函数顶部【判断视图是否可见】
+        // 另外，上面的刷新父元素 ui 需要一点时间，为了让最终可以高亮 item 得延迟一会
+        setTimeout(() => {
+            this.view.reveal(item);
+        }, 200);
     }
 
     //#endregion

@@ -62,6 +62,9 @@ export class CureSymbolTreeViewCMD {
 
             self.register_filter_no_global_var(),
             self.register_filter_no_global_var_off(),
+
+            self.register_follow_cursor(),
+            self.register_follow_cursor_off(),
         ];
         ctx.subscriptions.push(...commands);
         return self;
@@ -240,116 +243,128 @@ export class CureSymbolTreeViewCMD {
 
     //#endregion
 
-    // //#region 注册事件-follow-by-cursor
+    //#region 注册：follow cursor
 
-    // public static readonly cmd_follow_by_cursor = "cure-outline.follow-by-cursor";
+    private readonly cmd_follow_cursor = "cure-outline.follow-cursor";
+    private readonly cmd_follow_cursor_off = "cure-outline.follow-cursor-off";
 
-    // /** 根据行、列，查找距离它最近的 tree item
-    //  * - 如果 line、col 正好在某个 tree item 的位置，则返回该 item
-    //  * - 否则，返回距离它最近的两个 item，向上、向下一个，说明它在两个 item 之间
-    //  * @returns 返回数组
-    //  * - 只有一个元素，则说明位于该 item 中
-    //  * - 有两个元素，则说明位于两个 item 之间
-    //  * - 没有元素
-    //  */
-    // private get_closer_item(
-    //     _items: CureSymbolTreeItem[],
-    //     range: vscode.Range
-    // ): CureSymbolTreeItem[] {
-    //     // 需要先对 items 进行复制，然后按位置排序
-    //     // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
-    //     const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
+    /** 根据行、列，查找距离它最近的 tree item
+     * - 如果 line、col 正好在某个 tree item 的位置，则返回该 item
+     * - 否则，返回距离它最近的两个 item，向上、向下一个，说明它在两个 item 之间
+     * @returns 返回数组
+     * - 只有一个元素，则说明位于该 item 中
+     * - 有两个元素，则说明位于两个 item 之间
+     * - 没有元素
+     */
+    private get_closer_item(
+        _items: CureSymbolTreeItem[],
+        range: vscode.Range
+    ): CureSymbolTreeItem[] {
+        // 需要先对 items 进行复制，然后按位置排序
+        // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
+        const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
 
-    //     /** 向上看，最靠近的 item */
-    //     let up_closer_item: CureSymbolTreeItem = items[0];
-    //     /** 向下看，最靠近的 item */
-    //     let down_closer_item: CureSymbolTreeItem = items[items.length - 1];
+        /** 向上看，最靠近的 item */
+        let up_closer_item: CureSymbolTreeItem = items[0];
+        /** 向下看，最靠近的 item */
+        let down_closer_item: CureSymbolTreeItem = items[items.length - 1];
 
-    //     // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
-    //     if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
-    //         return [];
-    //     }
+        // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
+        if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
+            return [];
+        }
 
-    //     for (const item of items) {
-    //         // 这说明在 item 的内部！
-    //         if (item.is_contains(range, false)) {
-    //             // 继续向下查看是在哪个子元素中
-    //             if (item.Children.length > 0) {
-    //                 const sub_result = this.get_closer_item(item.Children, range);
-    //                 return sub_result.length === 0 ? [item] : sub_result;
-    //             }
-    //             return [item];
-    //         }
-    //         // 更新最靠近的 item 咯
-    //         else {
-    //             // 更新向上看最靠近的 item
-    //             // 如果它在 target 前面、在 up_closer_item 后面，则更新 up_closer_item
-    //             if (item.is_before(range) && item.is_after(up_closer_item)) {
-    //                 up_closer_item = item;
-    //             }
+        for (const item of items) {
+            // 这说明在 item 的内部！
+            if (item.is_contains(range, false)) {
+                // 继续向下查看是在哪个子元素中
+                if (item.Children.length > 0) {
+                    const sub_result = this.get_closer_item(item.Children, range);
+                    return sub_result.length === 0 ? [item] : sub_result;
+                }
+                return [item];
+            }
+            // 更新最靠近的 item 咯
+            else {
+                // 更新向上看最靠近的 item
+                // 如果它在 target 前面、在 up_closer_item 后面，则更新 up_closer_item
+                if (item.is_before(range) && item.is_after(up_closer_item)) {
+                    up_closer_item = item;
+                }
 
-    //             // 更新向下看最靠近的 item
-    //             if (item.is_after(range) && item.is_before(down_closer_item)) {
-    //                 down_closer_item = item;
-    //             }
-    //         }
-    //     }
+                // 更新向下看最靠近的 item
+                if (item.is_after(range) && item.is_before(down_closer_item)) {
+                    down_closer_item = item;
+                }
+            }
+        }
 
-    //     return up_closer_item.euqal(down_closer_item)
-    //         ? [up_closer_item]
-    //         : [up_closer_item, down_closer_item];
-    // }
+        return up_closer_item.equal(down_closer_item)
+            ? [up_closer_item]
+            : [up_closer_item, down_closer_item];
+    }
 
-    // /** 存储上一次最近的 item，如果光标还在这个范围，则可以避免多余的查询 */
-    // private last_closer_item: CureSymbolTreeItem[] = [];
+    /** 存储上一次最近的 item，如果光标还在这个范围，则可以避免多余的查询 */
+    private last_closer_item: CureSymbolTreeItem[] = [];
 
-    // /** 返回 true 表示更新了 */
-    // private update_closer_item(items: CureSymbolTreeItem[]) {
-    //     let result = true;
-    //     if (items.length === this.last_closer_item.length) {
-    //         const equal =
-    //             items[0]?.euqal(this.last_closer_item[0]) &&
-    //             items[1]?.euqal(this.last_closer_item[1]);
-    //         result = !equal;
-    //     }
-    //     if (result) {
-    //         this.last_closer_item = items;
-    //     }
-    //     return result;
-    // }
+    /** 返回 true 表示更新了 */
+    private update_closer_item(items: CureSymbolTreeItem[]) {
+        let result = true;
+        if (items.length === this.last_closer_item.length) {
+            const equal =
+                items[0]?.equal(this.last_closer_item[0]) &&
+                items[1]?.equal(this.last_closer_item[1]);
+            result = !equal;
+        }
+        if (result) {
+            this.last_closer_item = items;
+        }
+        return result;
+    }
 
-    // // #cure-warn 编辑文档时，会更新符号，然后才能高亮
-    // // 现在的实现上，会有一个【闪烁】
-    // // 考虑：读取【follow by cursor】配置项，在获取树节点时，从而可以更新它们的折叠状态
-    // // 等更新完状态之后，再执行【高亮】？但当前的高亮会强制切换到 outline view 上
-    // public follow_cursor(editor: vscode.TextEditor) {
-    //     const position = editor.selection.active;
-    //     const line = position.line;
-    //     const col = position.character;
-    //     const closer_item = this.get_closer_item(
-    //         this.provider.Items,
-    //         new vscode.Range(line, col, line, col)
-    //     );
+    // #cure-warn 编辑文档时，会更新符号，然后才能高亮
+    // 现在的实现上，会有一个【闪烁】
+    // 考虑：读取【follow by cursor】配置项，在获取树节点时，从而可以更新它们的折叠状态
+    // 等更新完状态之后，再执行【高亮】？但当前的高亮会强制切换到 outline view 上
+    private follow_cursor(editor: vscode.TextEditor) {
+        const position = editor.selection.active;
+        const line = position.line;
+        const col = position.character;
+        const closer_item = this.get_closer_item(
+            this.provider.Items,
+            new vscode.Range(line, col, line, col)
+        );
 
-    //     if (this.update_closer_item(closer_item)) {
-    //         if (closer_item.length === 1) {
-    //             this.highlight_item(closer_item[0]);
-    //         } else if (closer_item.length === 2) {
-    //         }
-    //     }
-    // }
+        if (this.update_closer_item(closer_item)) {
+            if (closer_item.length === 1) {
+                console.log("follow_cursor:", closer_item[0].label);
+                this.item_handler.highlight_item(closer_item[0]);
+            } else if (closer_item.length === 2) {
+                console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
+            }
+        }
+    }
 
-    // private _cmd_follow_by_cursor() {
-    //     const debounce_func = debounce_sync(this.follow_cursor.bind(this), 500);
+    private cancel_follow_cursor?: vscode.Disposable;
 
-    //     return vscode.commands.registerCommand(CureSymbolTreeViewCMD.cmd_follow_by_cursor, () => {
-    //         // #cure-warn 默认启用之后无法关闭嘿嘿
-    //         // 监听当前文档中、鼠标的位置
-    //         vscode.window.onDidChangeTextEditorSelection((e) => {
-    //             debounce_func(e.textEditor);
-    //         });
-    //     });
-    // }
+    private register_follow_cursor() {
+        const debounce_follow_cursor = debounce_sync(this.follow_cursor.bind(this), 500);
+        return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
+            this.update_switch_context("follow-cursor");
+            this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
+                if (this.view.visible) {
+                    debounce_follow_cursor(e.textEditor);
+                }
+            });
+        });
+    }
 
-    // //#endregion
+    private register_follow_cursor_off() {
+        return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
+            this.update_switch_context("follow-cursor-off");
+            this.cancel_follow_cursor?.dispose();
+        });
+    }
+
+    //#endregion
 }
