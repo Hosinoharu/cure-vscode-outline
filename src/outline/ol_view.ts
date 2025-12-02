@@ -43,9 +43,10 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         item.iconPath = symbol.Icon;
         // #cure-warn 实现符号的点击
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
-        // item.command = CureSymbolCMD.Instance.create_locate(symbol, () => {
-        // CureSymbolTreeViewCMD.get_instance().toggle_item_expand(item);
-        // });
+        // 添加 command 后，点击时不再会自动展开了
+        item.command = CureSymbolCMD.Instance.create_locate(symbol, () => {
+            //
+        });
         item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
         // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
@@ -256,7 +257,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     ): vscode.ProviderResult<vscode.TreeItem> {
         // 因为获取符号上面的注释会增加消耗，且不是所有符号都会被查看 tooltips
         // 所以将其的获取放到这里，而不是在创建 item 的时候
-        console.log("resolveTreeItem:", item.label);
         item.tooltip = element.Tooltip;
         return item;
     }
@@ -388,13 +388,59 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     // #endregion 定义事件处理函数
 }
 
-/** 综合处理一些 Tree View Item 的操作 */
+/** 综合处理一些 Tree View Item 的操作以及给 tree view 添加事件。单例模式 */
 export class CureSymbolTreeItemHandler {
-    constructor(
+    private static instance?: CureSymbolTreeItemHandler;
+
+    private constructor(
         private readonly provider: CureSymbolTreeProvider,
         private readonly view: vscode.TreeView<CureSymbolTreeItem>
     ) {
-        view.onDidChangeVisibility((e) => {});
+        if (CureSymbolTreeItemHandler.instance) {
+            throw new Error("CureSymbolTreeItemHandler is already initialized!");
+        }
+        CureSymbolTreeItemHandler.instance = this;
+    }
+
+    public static get Instance() {
+        if (!this.instance) {
+            throw new Error("CureSymbolTreeItemHandler is not initialized!");
+        }
+        return this.instance;
+    }
+
+    public static register(
+        provider: CureSymbolTreeProvider,
+        view: vscode.TreeView<CureSymbolTreeItem>
+    ) {
+        const self = new CureSymbolTreeItemHandler(provider, view);
+
+        // 当切换到其它页面时，就是【隐藏】咯
+        view.onDidChangeVisibility((e) => {
+            console.log("visibility changed:", e.visible);
+        });
+
+        // 可监听以下情况，但无法区分它们：
+        // - 点击左侧箭头的展开与折叠
+        // - 调用 view.reveal API 触发的展开（该 API 无法折叠）
+        // - 默认情况下（没有给 tree item 添加 command 时），
+        //   点击【item】时会自动展开、折叠
+        //
+        // 上面造成的【展开与折叠】并不能修改 item.collapsibleState 值
+        // 也就是说 collapsibleState 只能确定【初次渲染】时折叠的状态
+        view.onDidExpandElement((e) => {
+            console.log("expand:", e.element.label);
+        });
+        view.onDidCollapseElement((e) => {
+            console.log("collapse:", e.element.label);
+        });
+
+        // 当点击 item 时会触发，似乎可以替代【点击 item 时的事件】
+        // 但重复点击时当然是不会重复触发的啦！
+        view.onDidChangeSelection((e) => {
+            // 开启多选之后，就会有多个元素了
+            console.log("selection:", e.selection[0].label);
+        });
     }
 
     //#region 折叠与展开一个 tree item
@@ -514,5 +560,5 @@ export class CureSymbolTreeItemHandler {
         this.provider.refresh();
     }
 
-    // #endpoint
+    // #endregion
 }

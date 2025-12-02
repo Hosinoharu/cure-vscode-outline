@@ -11,7 +11,119 @@
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "cure-outline.reload-symbol",
+        "title": "Reload Current File Symbol",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cure-outline.expand-all",
+        "title": "Expand All",
+        "icon": "$(expand-all)"
+      },
+      {
+        "command": "cure-outline.expand-all-off",
+        "title": "Collapse All",
+        "icon": "$(collapse-all)"
+      },
+      {
+        "command": "cure-outline.sort-by-position",
+        "title": "Sort By Position"
+      },
+      {
+        "command": "cure-outline.sort-by-position-off",
+        "title": "✔ Sort By Position",
+        "icon": "$(check)"
+      },
+      {
+        "command": "cure-outline.sort-by-name",
+        "title": "Sort By Name"
+      },
+      {
+        "command": "cure-outline.sort-by-name-off",
+        "title": "✔ Sort By Name",
+        "icon": "$(check)"
+      },
+      {
+        "command": "cure-outline.sort-by-kind",
+        "title": "Sort By Kind"
+      },
+      {
+        "command": "cure-outline.sort-by-kind-off",
+        "title": "✔ Sort By Kind",
+        "icon": "$(check)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cure-outline",
+          "title": "Cure Outline",
+          "icon": "icons/icon-24.png"
+        }
+      ]
+    },
+    "views": {
+      "cure-outline": [
+        {
+          "id": "cure-outline",
+          "name": "Cure Outline",
+          "icon": "icons/icon-24.png"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "cure-outline.reload-symbol",
+          "when": "view == cure-outline",
+          "group": "navigation@1"
+        },
+        {
+          "command": "cure-outline.expand-all",
+          "when": "view == cure-outline && !cure-outline-is-expand-all",
+          "group": "navigation@2"
+        },
+        {
+          "command": "cure-outline.expand-all-off",
+          "when": "view == cure-outline && cure-outline-is-expand-all",
+          "group": "navigation@2"
+        },
+        {
+          "command": "cure-outline.sort-by-position",
+          "when": "view == cure-outline && !cure-outline-is-sort-by-position",
+          "group": "sort@1"
+        },
+        {
+          "command": "cure-outline.sort-by-position-off",
+          "when": "view == cure-outline && cure-outline-is-sort-by-position",
+          "group": "sort@1"
+        },
+        {
+          "command": "cure-outline.sort-by-name",
+          "when": "view == cure-outline && !cure-outline-is-sort-by-name",
+          "group": "sort@2"
+        },
+        {
+          "command": "cure-outline.sort-by-name-off",
+          "when": "view == cure-outline && cure-outline-is-sort-by-name",
+          "group": "sort@2"
+        },
+        {
+          "command": "cure-outline.sort-by-kind",
+          "when": "view == cure-outline && !cure-outline-is-sort-by-kind",
+          "group": "sort@3"
+        },
+        {
+          "command": "cure-outline.sort-by-kind-off",
+          "when": "view == cure-outline && cure-outline-is-sort-by-kind",
+          "group": "sort@3"
+        }
+      ]
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "npm run gen && tsc -p ./",
