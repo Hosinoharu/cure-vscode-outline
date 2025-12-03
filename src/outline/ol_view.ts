@@ -503,7 +503,7 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 折叠与 item 同级别的项，并增加 item 的记录 */
-    private _collasep_same_level_item(item: CureSymbolTreeItem) {
+    private _collasep_same_level_item(item: CureSymbolTreeItem, refhresh = true) {
         const parentId = item.parent?.UniqueId;
         if (!parentId) {
             return;
@@ -514,7 +514,7 @@ export class CureSymbolTreeItemHandler {
         }
         if (same_level_item) {
             this._collasep_recorded_item(same_level_item.UniqueId);
-            this.set_expand_state(same_level_item, false, true);
+            this.set_expand_state(same_level_item, false, refhresh);
         }
         this.expaned_items.set(parentId, item);
     }
@@ -532,29 +532,14 @@ export class CureSymbolTreeItemHandler {
     /** 修改 item 的折叠状态
      * - 如果原来没有折叠状态，则返回 false
      * - 如果真的修改了状态，则返回 true
-     * - 如果展开它，则可以控制是折叠一层 child item 还是不操作保持原样
      *
      * @param refhresh 为 true 则立即刷新，否则需要手续手动刷新
-     * @param collapse_child 如果当前为展开状态，那么为 true 则折叠所有子元素，否则为 false 则不操作子元素
      */
-    private set_expand_state(
-        item: CureSymbolTreeItem,
-        expand: boolean,
-        refresh: boolean,
-        collapse_child?: boolean
-    ) {
+    private set_expand_state(item: CureSymbolTreeItem, expand: boolean, refresh: boolean) {
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.None) {
             return false;
         }
-
         const ok = item.set_collapsible_state(expand);
-        if (expand && collapse_child && ok) {
-            // 不递归调用，仅处理一层子项
-            item.Children.forEach((v) => {
-                v.Children.length > 0 && v.set_collapsible_state(false);
-            });
-        }
-        // 在这里刷新 item 时会同时刷新子项啦
         ok && refresh && this.provider.refresh(item);
         return ok;
     }
@@ -573,7 +558,10 @@ export class CureSymbolTreeItemHandler {
     public async expand_only_one(item: CureSymbolTreeItem) {
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
-        } else if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+        }
+        // 这里并没有使用 if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed)
+        // 因为这个 API 中还可以折叠同级别的其它 item 啦
+        else {
             this.record_expaned_item(item);
         }
         // 启用 focus 可以让该 item 展示在视图的中间
@@ -588,31 +576,13 @@ export class CureSymbolTreeItemHandler {
         // 向上找父元素，依次展开它们，但不刷新 ui
         let parent = item;
         while (parent.parent) {
-            this.set_expand_state(parent.parent, true, false);
+            this.record_expaned_item(parent, false);
             parent = parent.parent;
         }
-
-        // 关闭同层级的，不需要刷新 ui
-        item.parent?.Children.forEach((v) => {
-            if (!v.equal(item)) {
-                this.set_expand_state(v, false, false);
-            }
-        });
-
-        //再切换它自身的状态，折叠所有子项
-        this.set_expand_state(item, true, false, true);
+        // 展开自身但不会刷新 ui
+        this.record_expaned_item(item, false);
         // 刷新最顶层的父元素 ui，实现展开！
         this.provider.refresh(parent);
-
-        // 下面的这个循环正好给上面的【刷新】留下了时间，否则后续高亮特定元素时会失败（没有高亮效果）
-
-        // 现在 parent 已经到了顶层了，那么再折叠其它顶层的 item 并立即刷新
-        this.provider.Items.forEach((v) => {
-            if (!v.equal(parent)) {
-                this.set_expand_state(v, false, true);
-            }
-        });
-
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
         // 所以在当前函数顶部【判断视图是否可见】
         await this.view.reveal(item);

@@ -351,7 +351,7 @@ export class CureSymbolTreeViewCMD {
     private cancel_follow_cursor?: vscode.Disposable;
 
     private register_follow_cursor() {
-        const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 500);
+        const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 200);
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
