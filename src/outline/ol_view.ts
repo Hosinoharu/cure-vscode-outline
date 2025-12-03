@@ -50,7 +50,8 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         item.command = CureSymbolCMD.Instance.create_locate(symbol, async () => {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
-        item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
+        // item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
+        item.description = item.symbol.kind;
         // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();

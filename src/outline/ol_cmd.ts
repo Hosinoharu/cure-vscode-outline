@@ -342,8 +342,8 @@ export class CureSymbolTreeViewCMD {
             } else if (closer_item.length === 2) {
                 // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
                 // 只能高亮一个！！！
-                // this.item_handler.highlight_item(closer_item[0]);
-                // this.item_handler.highlight_item(closer_item[1]);
+                // this.item_handler.highlight(closer_item[0]);
+                // this.item_handler.highlight(closer_item[1]);
             }
         }
     }
@@ -354,6 +354,12 @@ export class CureSymbolTreeViewCMD {
         const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 200);
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
+            // 先折叠所有，然后根据当前鼠标位置，展开最近的 item
+            this.update_switch_context("expand-all-off");
+            this.item_handler.expand_all(false);
+            const editor = vscode.window.activeTextEditor;
+            editor && debounce_follow_cursor(editor);
+
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
                 if (this.view.visible) {
                     debounce_follow_cursor(e.textEditor);
