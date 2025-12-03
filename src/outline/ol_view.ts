@@ -452,6 +452,13 @@ export class CureSymbolTreeItemHandler {
         // });
     }
 
+    /** 重置内部一些状态 */
+    public reset_state() {
+        this.is_follow_viewport_ok = true;
+        this.last_expand_top_item = undefined;
+        this.expaned_items.clear();
+    }
+
     //#region 关于 follow viewport
 
     /**
@@ -460,8 +467,10 @@ export class CureSymbolTreeItemHandler {
      *
      * 所以有了这个标记，如果为 `false` 则说明当前很忙，不要触发 `follow viewport`
      */
-    public is_follow_viewport_ok = false;
-    /** 符号跳转、符号树刷新都需要刷新，所以给定等待时间才可以继续 `follow viewport` */
+    public is_follow_viewport_ok = true;
+    /** 点击符号跳转到位置时，会修改滚动条，为了避免触发 `follow viewport`，
+     * 所以给定等待时间才可以继续 `follow viewport`
+     */
     private set_follow_viewport_ok() {
         setTimeout(() => {
             this.is_follow_viewport_ok = true;
@@ -522,7 +531,7 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 折叠与 item 同级别的项，并增加 item 的记录 */
-    private _collasep_same_level_item(item: CureSymbolTreeItem, refhresh = true) {
+    private _collasep_same_level_item(item: CureSymbolTreeItem) {
         const parentId = item.parent?.UniqueId;
         if (!parentId) {
             return;
@@ -533,7 +542,7 @@ export class CureSymbolTreeItemHandler {
         }
         if (same_level_item) {
             this._collasep_recorded_item(same_level_item.UniqueId);
-            this.set_expand_state(same_level_item, false, refhresh);
+            this.set_expand_state(same_level_item, false, true);
         }
         this.expaned_items.set(parentId, item);
     }
@@ -595,22 +604,20 @@ export class CureSymbolTreeItemHandler {
         if (!this.visible) {
             return;
         }
-        this.is_follow_viewport_ok = false;
-
-        // 向上找父元素，依次展开它们，但不刷新 ui
+        // 展开各层级但不刷新 ui
         let parent = item;
-        while (parent.parent) {
+        while (parent) {
             this.record_expaned_item(parent, false);
+            if (!parent.parent) {
+                break;
+            }
             parent = parent.parent;
         }
-        // 展开自身但不会刷新 ui
-        this.record_expaned_item(item, false);
-        // 刷新最顶层的父元素 ui，实现展开！
-        this.provider.refresh(parent);
+        // warn 修复一个 BUG：似乎因为刷新太快 reveal 会造成简短的闪烁？也不清楚，就这样吧
+        // 现在 parent 就是顶级的 item 了，刷新它！
+        this.record_expaned_item(parent);
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
-        // 所以在当前函数顶部【判断视图是否可见】
         await this.view.reveal(item);
-        this.set_follow_viewport_ok();
     }
 
     //#endregion
@@ -629,7 +636,7 @@ export class CureSymbolTreeItemHandler {
 
     /** 全部折叠或全部展开 */
     public expand_all(expand: boolean) {
-        this.expaned_items.clear();
+        this.reset_state();
         this.set_items_expand(this.provider.Items, expand);
         this.provider.refresh();
     }

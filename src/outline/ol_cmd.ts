@@ -338,16 +338,18 @@ export class CureSymbolTreeViewCMD {
             new vscode.Range(line, col, line, col)
         );
 
-        if (this.update_closer_item(closer_item)) {
-            if (closer_item.length === 1) {
-                // console.log("follow_cursor:", closer_item[0].label);
-                await this.item_handler.highlight(closer_item[0]);
-            } else if (closer_item.length === 2) {
-                // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
-                // 只能高亮一个！！！
-                // this.item_handler.highlight(closer_item[0]);
-                // this.item_handler.highlight(closer_item[1]);
-            }
+        if (!this.update_closer_item(closer_item)) {
+            return;
+        }
+
+        if (closer_item.length === 1) {
+            // console.log("follow_cursor:", closer_item[0].label);
+            await this.item_handler.highlight(closer_item[0]);
+        } else if (closer_item.length === 2) {
+            // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
+            // 只能高亮一个！！！
+            // this.item_handler.highlight(closer_item[0]);
+            this.item_handler.highlight(closer_item[1]);
         }
     }
 
@@ -388,19 +390,20 @@ export class CureSymbolTreeViewCMD {
 
     private async follow_viewport(editor: vscode.TextEditor) {
         const ranges = editor.visibleRanges;
-        if (ranges.length > 0) {
-            const bottom_line = ranges[0].end.line;
-            // 获取最靠近这一行的 item
-            const closer_item = this.get_closer_item(
-                this.provider.Items,
-                new vscode.Range(bottom_line, 0, bottom_line, 0)
-            );
-            if (closer_item.length === 1) {
-                // console.log("follow_viewport:", closer_item[0].label);
-                this.item_handler.highlight(closer_item[0]);
-            } else if (closer_item.length === 2) {
-                this.item_handler.highlight(closer_item[1]);
-            }
+        if (ranges.length === 0) {
+            return;
+        }
+        const bottom_line = ranges[0].end.line;
+        // 获取最靠近这一行的 item
+        const closer_item = this.get_closer_item(
+            this.provider.Items,
+            new vscode.Range(bottom_line, 0, bottom_line, 0)
+        );
+        if (closer_item.length === 1) {
+            // console.log("follow_viewport:", closer_item[0].label);
+            await this.item_handler.highlight(closer_item[0]);
+        } else if (closer_item.length === 2) {
+            await this.item_handler.highlight(closer_item[1]);
         }
     }
 

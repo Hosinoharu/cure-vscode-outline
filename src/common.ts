@@ -55,7 +55,7 @@ export function debounce_sync<T extends (...args: any[]) => void>(
 }
 
 /**
- * 节流函数
+ * 节流函数（在节流窗口开始时执行）
  * @param func 要执行的函数
  * @param delay 节流时间间隔(毫秒)
  * @returns 包装后的节流函数
@@ -66,28 +66,24 @@ export function throttle<T extends (...args: any[]) => any>(
 ): (...args: Parameters<T>) => void {
     let lastExecTime = 0;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let shouldExecute = true; // 标记是否应该在窗口开始时执行
 
     return function (this: any, ...args: Parameters<T>): void {
         const currentTime = Date.now();
-        const timeSinceLastExec = currentTime - lastExecTime;
-        const remainingTime = delay - timeSinceLastExec;
 
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-
-        if (timeSinceLastExec >= delay) {
-            // 如果距离上次执行已经超过delay，立即执行
+        if (shouldExecute) {
+            // 在节流窗口开始时立即执行
             func.apply(this, args);
             lastExecTime = currentTime;
-        } else {
-            // 否则设置定时器，在剩余时间后执行
+            shouldExecute = false; // 进入节流期
+
+            // 设置定时器，在delay后重置执行标志
             timeoutId = setTimeout(() => {
-                func.apply(this, args);
-                lastExecTime = Date.now();
+                shouldExecute = true;
                 timeoutId = null;
-            }, remainingTime);
+            }, delay);
         }
+        // 如果在节流期内调用，忽略此次调用
     };
 }
 
