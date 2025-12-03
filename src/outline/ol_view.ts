@@ -7,7 +7,6 @@ import * as vscode from "vscode";
 import crypto from "crypto";
 import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureSymbolManager } from "./ol_manager";
-// import { CureSymbolCMD, CureSymbolTreeViewCMD } from "./ol_cmd";
 import { OutlineFilterType, OutlineSortType, TreeItemType } from "../types/symbol";
 import { set_context_value } from "../common";
 
