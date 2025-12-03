@@ -606,12 +606,14 @@ export class CureSymbolTreeItemHandler {
         }
         // 展开各层级但不刷新 ui
         let parent = item;
-        while (parent) {
-            this.record_expaned_item(parent, false);
-            if (!parent.parent) {
-                break;
+        if (!parent.IsTopLevel) {
+            while (parent) {
+                this.record_expaned_item(parent, false);
+                if (!parent.parent) {
+                    break;
+                }
+                parent = parent.parent;
             }
-            parent = parent.parent;
         }
         // warn 修复一个 BUG：似乎因为刷新太快 reveal 会造成简短的闪烁？也不清楚，就这样吧
         // 现在 parent 就是顶级的 item 了，刷新它！
