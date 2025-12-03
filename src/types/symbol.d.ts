@@ -58,7 +58,7 @@ type FilterType = "filter-no-local-var" | "filter-no-global-var";
 type FilterCmdType = FilterType | `${FilterType}-off`;
 
 /** 响应编辑器的操作 */
-type FollowType = "follow-cursor";
+type FollowType = "follow-cursor" | "follow-viewport";
 type FollowCmdType = FollowType | `${FollowType}-off`;
 
 /** 开关类命令，具备【on、off】两个命令哟 */

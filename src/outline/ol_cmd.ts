@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
-import { debounce } from "../common";
+import { debounce, throttle } from "../common";
 import { OutlineSortType, SwitchCmdType } from "../types/symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
@@ -65,6 +65,9 @@ export class CureSymbolTreeViewCMD {
 
             self.register_follow_cursor(),
             self.register_follow_cursor_off(),
+
+            self.register_follow_viewport(),
+            self.register_follow_viewport_off(),
         ];
         ctx.subscriptions.push(...commands);
         return self;
@@ -372,6 +375,58 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
             this.update_switch_context("follow-cursor-off");
             this.cancel_follow_cursor?.dispose();
+        });
+    }
+
+    //#endregion
+
+    // #region 注册：follow viewport
+
+    private readonly cmd_follow_viewport = "cure-outline.follow-viewport";
+    private readonly cmd_follow_viewport_off = "cure-outline.follow-viewport-off";
+    private cancel_follow_viewport?: vscode.Disposable;
+
+    private async follow_viewport(editor: vscode.TextEditor) {
+        const ranges = editor.visibleRanges;
+        if (ranges.length > 0) {
+            const bottom_line = ranges[0].end.line;
+            // 获取最靠近这一行的 item
+            const closer_item = this.get_closer_item(
+                this.provider.Items,
+                new vscode.Range(bottom_line, 0, bottom_line, 0)
+            );
+            if (closer_item.length === 1) {
+                // console.log("follow_viewport:", closer_item[0].label);
+                this.item_handler.highlight(closer_item[0]);
+            } else if (closer_item.length === 2) {
+                this.item_handler.highlight(closer_item[1]);
+            }
+        }
+    }
+
+    private register_follow_viewport() {
+        const throttle_follow_viewport = throttle(this.follow_viewport.bind(this), 200);
+        return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
+            this.update_switch_context("follow-viewport");
+            // 先折叠所有，然后根据当前位置，展开最近的 item
+            this.update_switch_context("expand-all-off");
+            this.item_handler.expand_all(false);
+            const editor = vscode.window.activeTextEditor;
+            editor && throttle_follow_viewport(editor);
+
+            // 监听编辑器滚动，当【点击符号】跳转时，也会触发滚动事件
+            this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
+                if (this.view.visible && this.item_handler.is_follow_viewport_ok) {
+                    throttle_follow_viewport(e.textEditor);
+                }
+            });
+        });
+    }
+
+    private register_follow_viewport_off() {
+        return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
+            this.update_switch_context("follow-viewport-off");
+            this.cancel_follow_viewport?.dispose();
         });
     }
 

@@ -33,6 +33,15 @@
         "icon": "$(check)"
       },
       {
+        "command": "cure-outline.follow-viewport",
+        "title": "Follow Viewport"
+      },
+      {
+        "command": "cure-outline.follow-viewport-off",
+        "title": "✔ Follow Viewport",
+        "icon": "$(check)"
+      },
+      {
         "command": "cure-outline.expand-all",
         "title": "Expand All",
         "icon": "$(expand-all)"
@@ -140,12 +149,22 @@
         {
           "command": "cure-outline.follow-cursor",
           "when": "view == cure-outline && !cure-outline-is-follow-cursor",
-          "group": "1_follow"
+          "group": "1_follow@1"
         },
         {
           "command": "cure-outline.follow-cursor-off",
           "when": "view == cure-outline && cure-outline-is-follow-cursor",
-          "group": "1_follow"
+          "group": "1_follow@1"
+        },
+        {
+          "command": "cure-outline.follow-viewport",
+          "when": "view == cure-outline && !cure-outline-is-follow-viewport",
+          "group": "1_follow@2"
+        },
+        {
+          "command": "cure-outline.follow-viewport-off",
+          "when": "view == cure-outline && cure-outline-is-follow-viewport",
+          "group": "1_follow@2"
         },
         {
           "command": "cure-outline.expand-all",
@@ -160,52 +179,52 @@
         {
           "command": "cure-outline.sort-by-position",
           "when": "view == cure-outline && !cure-outline-is-sort-by-position",
-          "group": "sort@1"
+          "group": "3_sort@1"
         },
         {
           "command": "cure-outline.sort-by-position-off",
           "when": "view == cure-outline && cure-outline-is-sort-by-position",
-          "group": "sort@1"
+          "group": "3_sort@1"
         },
         {
           "command": "cure-outline.sort-by-name",
           "when": "view == cure-outline && !cure-outline-is-sort-by-name",
-          "group": "sort@2"
+          "group": "3_sort@2"
         },
         {
           "command": "cure-outline.sort-by-name-off",
           "when": "view == cure-outline && cure-outline-is-sort-by-name",
-          "group": "sort@2"
+          "group": "3_sort@2"
         },
         {
           "command": "cure-outline.sort-by-kind",
           "when": "view == cure-outline && !cure-outline-is-sort-by-kind",
-          "group": "sort@3"
+          "group": "3_sort@3"
         },
         {
           "command": "cure-outline.sort-by-kind-off",
           "when": "view == cure-outline && cure-outline-is-sort-by-kind",
-          "group": "sort@3"
+          "group": "3_sort@3"
         },
         {
           "command": "cure-outline.filter-no-local-var",
           "when": "view == cure-outline && !cure-outline-is-filter-no-local-var",
-          "group": "filter@1"
+          "group": "2_filter@1"
         },
         {
           "command": "cure-outline.filter-no-local-var-off",
           "when": "view == cure-outline && cure-outline-is-filter-no-local-var",
-          "group": "filter@1"
+          "group": "2_filter@1"
         },
         {
           "command": "cure-outline.filter-no-global-var",
           "when": "view == cure-outline && !cure-outline-is-filter-no-global-var",
-          "group": "filter@2"
+          "group": "2_filter@2"
         },
         {
           "command": "cure-outline.filter-no-global-var-off",
           "when": "view == cure-outline && cure-outline-is-filter-no-global-var",
-          "group": "filter@2"
+          "group": "2_filter@2"
         }
       ],
       "view/item/context": [

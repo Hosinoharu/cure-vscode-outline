@@ -47,7 +47,7 @@ const follow = (() => {
             command: "cure-outline.follow-cursor",
             when: "view == cure-outline && !cure-outline-is-follow-cursor",
             // 为了让它位于最上方
-            group: "1_follow",
+            group: "1_follow@1",
         },
     };
     const follow_cursor_off = {
@@ -59,11 +59,34 @@ const follow = (() => {
         menu: {
             command: "cure-outline.follow-cursor-off",
             when: "view == cure-outline && cure-outline-is-follow-cursor",
-            group: "1_follow",
+            group: "1_follow@1",
+        },
+    };
+    const follow_viewport = {
+        cmd: {
+            command: "cure-outline.follow-viewport",
+            title: "Follow Viewport",
+        },
+        menu: {
+            command: "cure-outline.follow-viewport",
+            when: "view == cure-outline && !cure-outline-is-follow-viewport",
+            group: "1_follow@2",
+        },
+    };
+    const follow_viewport_off = {
+        cmd: {
+            command: "cure-outline.follow-viewport-off",
+            title: "✔ Follow Viewport",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.follow-viewport-off",
+            when: "view == cure-outline && cure-outline-is-follow-viewport",
+            group: "1_follow@2",
         },
     };
 
-    return create_result([follow_cursor, follow_cursor_off]);
+    return create_result([follow_cursor, follow_cursor_off, follow_viewport, follow_viewport_off]);
 })();
 
 // 展开符号
@@ -130,7 +153,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-position",
             when: "view == cure-outline && !cure-outline-is-sort-by-position",
-            group: "sort@1",
+            group: "3_sort@1",
         },
     };
     const sort_by_postion_off = {
@@ -142,7 +165,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-position-off",
             when: "view == cure-outline && cure-outline-is-sort-by-position",
-            group: "sort@1",
+            group: "3_sort@1",
         },
     };
     const sort_by_name = {
@@ -153,7 +176,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-name",
             when: "view == cure-outline && !cure-outline-is-sort-by-name",
-            group: "sort@2",
+            group: "3_sort@2",
         },
     };
     const sort_by_name_off = {
@@ -165,7 +188,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-name-off",
             when: "view == cure-outline && cure-outline-is-sort-by-name",
-            group: "sort@2",
+            group: "3_sort@2",
         },
     };
     const sort_by_kind = {
@@ -176,7 +199,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-kind",
             when: "view == cure-outline && !cure-outline-is-sort-by-kind",
-            group: "sort@3",
+            group: "3_sort@3",
         },
     };
     const sort_by_kind_off = {
@@ -188,7 +211,7 @@ const sort = (() => {
         menu: {
             command: "cure-outline.sort-by-kind-off",
             when: "view == cure-outline && cure-outline-is-sort-by-kind",
-            group: "sort@3",
+            group: "3_sort@3",
         },
     };
 
@@ -212,7 +235,7 @@ const filter = (() => {
         menu: {
             command: "cure-outline.filter-no-local-var",
             when: "view == cure-outline && !cure-outline-is-filter-no-local-var",
-            group: "filter@1",
+            group: "2_filter@1",
         },
     };
     const filter_no_local_var_off = {
@@ -224,7 +247,7 @@ const filter = (() => {
         menu: {
             command: "cure-outline.filter-no-local-var-off",
             when: "view == cure-outline && cure-outline-is-filter-no-local-var",
-            group: "filter@1",
+            group: "2_filter@1",
         },
     };
     const filter_no_global_var = {
@@ -235,7 +258,7 @@ const filter = (() => {
         menu: {
             command: "cure-outline.filter-no-global-var",
             when: "view == cure-outline && !cure-outline-is-filter-no-global-var",
-            group: "filter@2",
+            group: "2_filter@2",
         },
     };
     const filter_no_global_var_off = {
@@ -247,7 +270,7 @@ const filter = (() => {
         menu: {
             command: "cure-outline.filter-no-global-var-off",
             when: "view == cure-outline && cure-outline-is-filter-no-global-var",
-            group: "filter@2",
+            group: "2_filter@2",
         },
     };
 

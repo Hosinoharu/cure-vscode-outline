@@ -452,6 +452,24 @@ export class CureSymbolTreeItemHandler {
         // });
     }
 
+    //#region 关于 follow viewport
+
+    /**
+     * 当开启 `follow viewport` 时，
+     * 【点击符号跳转到位置】、【follow cursor] 等都会触发 `follow viewport`。
+     *
+     * 所以有了这个标记，如果为 `false` 则说明当前很忙，不要触发 `follow viewport`
+     */
+    public is_follow_viewport_ok = false;
+    /** 符号跳转、符号树刷新都需要刷新，所以给定等待时间才可以继续 `follow viewport` */
+    private set_follow_viewport_ok() {
+        setTimeout(() => {
+            this.is_follow_viewport_ok = true;
+        }, 200);
+    }
+
+    //#endregion
+
     //#region 展开与折叠的优化
 
     /** 优化功能【只展开一个 item】，其策略如下所述。
@@ -557,6 +575,8 @@ export class CureSymbolTreeItemHandler {
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
     public async expand_only_one(item: CureSymbolTreeItem) {
+        this.is_follow_viewport_ok = false;
+
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
         }
@@ -567,6 +587,7 @@ export class CureSymbolTreeItemHandler {
         }
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
+        this.set_follow_viewport_ok();
     }
 
     /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
@@ -574,6 +595,8 @@ export class CureSymbolTreeItemHandler {
         if (!this.visible) {
             return;
         }
+        this.is_follow_viewport_ok = false;
+
         // 向上找父元素，依次展开它们，但不刷新 ui
         let parent = item;
         while (parent.parent) {
@@ -587,6 +610,7 @@ export class CureSymbolTreeItemHandler {
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
         // 所以在当前函数顶部【判断视图是否可见】
         await this.view.reveal(item);
+        this.set_follow_viewport_ok();
     }
 
     //#endregion
