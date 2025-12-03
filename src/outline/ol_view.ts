@@ -33,9 +33,12 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     public get IsTopLevel() {
         return this.parent === undefined;
     }
+    /** 该 item 的名称 */
+    public readonly name: string;
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
+        this.name = label;
         this.symbol = symbol;
     }
 
@@ -57,6 +60,39 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         item.reset_collapsible_state();
         return item;
     }
+
+    /** 标记该 item 应该刷新，刷新之后应该重置其为 false */
+    public should_refresh = false;
+
+    /** 调用本方法后，说明 item 应该刷新！ */
+    public ready_update() {
+        this.id = crypto.randomUUID();
+        this.should_refresh = true;
+    }
+
+    //#region 高亮元素
+    // 核心思想：设置 item.label 时，可以指定 label 中的高亮部分
+    // 从而实现高亮效果，虽然效果不太好就是了！
+
+    private is_highlighted = false;
+    /** 高亮元素或取消高亮，返回 true 表示操作成功。后期需要手动刷新 item。
+     *
+     * **只能在 `follow cursor、follow viewport` 时启用高亮**
+     */
+    public highlighten(ok: boolean) {
+        if (ok === this.is_highlighted) {
+            return false;
+        }
+        this.is_highlighted = ok;
+        const label = ok
+            ? ({ label: this.name, highlights: [[0, this.name.length]] } as vscode.TreeItemLabel)
+            : this.name;
+        this.label = label;
+        this.ready_update();
+        return true;
+    }
+
+    //#endregion
 
     /** 修改它的折叠状态！
      * @param expand 是否展开
@@ -92,7 +128,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         // 即便点击【展开箭头】，它也不会改变！调用 view.reveal API 也不会改变其值！
         // 而且就算改变了它的值，刷新 tree view 也不会更新折叠状态！
         // 因为需要改变它在 tree view 中的 id 哟！
-        this.id = crypto.randomUUID();
+        this.ready_update();
         return true;
     }
 
@@ -168,6 +204,18 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
 
     set Children(v: CureSymbolTreeItem[]) {
         this.children = v;
+    }
+
+    /** 判断 p 是否为当前 item 的 parent */
+    public is_my_parent(p: CureSymbolTreeItem) {
+        let parent = this.parent;
+        while (parent) {
+            if (parent.equal(p)) {
+                return true;
+            }
+            parent = parent.parent;
+        }
+        return false;
     }
 
     /** 妥协的设计。临时存储一份过滤后的子节点便于后续展示。
@@ -341,6 +389,12 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 刷新视图或者刷新指定的 tree item */
     refresh(item?: CureSymbolTreeItem) {
+        if (item) {
+            if (!item.should_refresh) {
+                return;
+            }
+            item.should_refresh = false;
+        }
         this._onDidChangeTreeData.fire(item);
     }
 
@@ -438,17 +492,17 @@ export class CureSymbolTreeItemHandler {
         //
         // ！！！不能在这里修改 item.collapsibleState 值，否则完全无法精确控制！
         // view.onDidExpandElement((e) => {
-        //     console.log("expand:", e.element.label);
+        //     console.log("expand:", e.element.name);
         // });
         // view.onDidCollapseElement((e) => {
-        //     console.log("collapse:", e.element.label);
+        //     console.log("collapse:", e.element.name);
         // });
 
         // 当点击 item 时会触发，似乎可以替代【点击 item 时的事件】
         // 但重复点击时当然是不会重复触发的啦！
         // view.onDidChangeSelection((e) => {
         //     // 开启多选之后，就会有多个元素了
-        //     console.log("selection:", e.selection[0].label);
+        //     console.log("selection:", e.selection[0].name);
         // });
     }
 
@@ -508,12 +562,11 @@ export class CureSymbolTreeItemHandler {
         // 展开顶层节点
         if (item.IsTopLevel) {
             if (this.last_expand_top_item && !item.equal(this.last_expand_top_item)) {
-                this._collasep_recorded_item(this.last_expand_top_item.UniqueId);
-                this.set_expand_state(this.last_expand_top_item, false, true);
+                this.unrecord_expaned_item(this.last_expand_top_item, true);
             }
             this.last_expand_top_item = item;
         }
-        // 展开非顶层节点
+        // 展开非顶层节点，那么先折叠同层级的
         else {
             this._collasep_same_level_item(item);
         }
@@ -526,7 +579,9 @@ export class CureSymbolTreeItemHandler {
         if (item.IsTopLevel) {
             this.last_expand_top_item = undefined;
         }
-        this._collasep_recorded_item(item.UniqueId);
+        if (this._collasep_recorded_item(item.UniqueId)) {
+            item.ready_update();
+        }
         this.set_expand_state(item, false, refhresh);
     }
 
@@ -540,36 +595,35 @@ export class CureSymbolTreeItemHandler {
         if (same_level_item?.equal(item)) {
             return;
         }
-        if (same_level_item) {
-            this._collasep_recorded_item(same_level_item.UniqueId);
-            this.set_expand_state(same_level_item, false, true);
-        }
+        same_level_item && this.unrecord_expaned_item(same_level_item);
         this.expaned_items.set(parentId, item);
     }
 
-    /** 递归折叠 `parentId` 下面的所有子项并更新记录，后续应该手动刷新 ui */
-    private _collasep_recorded_item(parentId: string) {
+    /** 递归折叠 `parentId` 下面的所有子项并更新记录，后续应该手动刷新 ui
+     * @returns 返回 true 表示子项被改变了
+     */
+    private _collasep_recorded_item(parentId: string): boolean {
         const same_level_item = this.expaned_items.get(parentId);
+        let changed = false;
         if (same_level_item) {
-            this._collasep_recorded_item(same_level_item.UniqueId);
             this.set_expand_state(same_level_item, false, false);
             this.expaned_items.delete(parentId);
+
+            changed =
+                this._collasep_recorded_item(same_level_item.UniqueId) ||
+                same_level_item.should_refresh;
         }
+        return changed;
     }
 
     /** 修改 item 的折叠状态
-     * - 如果原来没有折叠状态，则返回 false
-     * - 如果真的修改了状态，则返回 true
-     *
      * @param refhresh 为 true 则立即刷新，否则需要手续手动刷新
      */
     private set_expand_state(item: CureSymbolTreeItem, expand: boolean, refresh: boolean) {
-        if (item.collapsibleState === vscode.TreeItemCollapsibleState.None) {
-            return false;
+        if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
+            item.set_collapsible_state(expand);
         }
-        const ok = item.set_collapsible_state(expand);
-        ok && refresh && this.provider.refresh(item);
-        return ok;
+        refresh && this.provider.refresh(item);
     }
 
     //#endregion
@@ -599,6 +653,32 @@ export class CureSymbolTreeItemHandler {
         this.set_follow_viewport_ok();
     }
 
+    //#endregion
+
+    //#region 高亮item
+
+    /** 记录当前高亮的 provider，最多有两个 */
+    private readonly highlighted_items: {
+        first?: CureSymbolTreeItem;
+        second?: CureSymbolTreeItem;
+    } = {};
+
+    /** 取消之前的高亮并高亮当前 item */
+    private _highlight(curr_item: CureSymbolTreeItem) {
+        const { first } = this.highlighted_items;
+        const exist = first && first.equal(curr_item);
+        if (exist) {
+            return;
+        }
+        first?.highlighten(false);
+        // 如果 curr_item 是 first 的子项，那么不需要折叠 first 哟
+        if (first && !curr_item.is_my_parent(first)) {
+            this.unrecord_expaned_item(first);
+        }
+        curr_item.highlighten(true);
+        this.highlighted_items.first = curr_item;
+    }
+
     /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
     public async highlight(item: CureSymbolTreeItem) {
         if (!this.visible) {
@@ -615,8 +695,8 @@ export class CureSymbolTreeItemHandler {
                 parent = parent.parent;
             }
         }
-        // warn 修复一个 BUG：似乎因为刷新太快 reveal 会造成简短的闪烁？也不清楚，就这样吧
-        // 现在 parent 就是顶级的 item 了，刷新它！
+        this._highlight(item);
+        item !== parent && parent.ready_update();
         this.record_expaned_item(parent);
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
         await this.view.reveal(item);

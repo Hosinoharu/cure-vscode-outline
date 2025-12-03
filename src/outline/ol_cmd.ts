@@ -343,12 +343,11 @@ export class CureSymbolTreeViewCMD {
         }
 
         if (closer_item.length === 1) {
-            // console.log("follow_cursor:", closer_item[0].label);
+            // console.log("follow_cursor:", closer_item[0].name);
             await this.item_handler.highlight(closer_item[0]);
         } else if (closer_item.length === 2) {
-            // console.log("follow_cursor", closer_item[0].label, " and ", closer_item[1].label);
-            // 只能高亮一个！！！
-            // this.item_handler.highlight(closer_item[0]);
+            // console.log("follow_cursor", closer_item[0].name, " and ", closer_item[1].name);
+            this.item_handler.highlight(closer_item[0]);
             this.item_handler.highlight(closer_item[1]);
         }
     }
@@ -400,7 +399,7 @@ export class CureSymbolTreeViewCMD {
             new vscode.Range(bottom_line, 0, bottom_line, 0)
         );
         if (closer_item.length === 1) {
-            // console.log("follow_viewport:", closer_item[0].label);
+            // console.log("follow_viewport:", closer_item[0].name);
             await this.item_handler.highlight(closer_item[0]);
         } else if (closer_item.length === 2) {
             await this.item_handler.highlight(closer_item[1]);
