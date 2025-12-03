@@ -29,6 +29,10 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     public get Tooltip() {
         return this.symbol.Comment || this.symbol.name;
     }
+    /** 判断当前 item 是否位于顶层 */
+    public get IsTopLevel() {
+        return this.parent === undefined;
+    }
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -183,8 +187,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     /** 是否满足过滤的条件 */
     public is_match_filter(type: OutlineFilterType) {
         const kind = this.symbol.kind;
-        // 没有父成员，说明是全局的哟
-        const is_global = this.parent === undefined;
+        const is_global = this.IsTopLevel;
         const is_var = kind === "Variable" || kind === "Constant";
 
         switch (type) {
@@ -448,22 +451,83 @@ export class CureSymbolTreeItemHandler {
         // });
     }
 
-    //#region 折叠与展开一个 tree item
+    //#region 展开与折叠的优化
 
-    /*
-        根据我的目标：
-        - 点击 item 时要展开它，再次点击折叠它
-        - 同级别只能展开一个 item
+    /** 优化功能【只展开一个 item】，其策略如下所述。
+     *
+     * # 关于非顶层节点的展开
+     * 1. 当展开 A 时，记录它的 `parentId`，说明对应的 `parent item` 下面有一个展开项了
+     * 2. 当展开 B 时，如果 B 的 `parentId` 已经存在（比如就等于 A 的 `parentId`），
+     *    则说明有同层级的节点需要折叠，则获取 A
+     * 3. 找 A 下面又展开了哪些子节点，这可以根据 A 的 id 来读取，
+     *    依次将子项折叠（但不刷新 ui），递归循环
+     * 4. 折叠 A 并刷新 A，从而刷新 ui
+     * 5. 最后展开 B
+     *
+     * # 关于顶层节点的展开
+     * 1. 当展开 A 时，如果它是顶层节点，则记录到成员 `last_expand_top_item`
+     * 2. 当展开 B 时，如果它也是顶层节点，则折叠 `last_expand_top_item` 并刷新
+     */
+    private readonly expaned_items: Map<string, CureSymbolTreeItem> = new Map();
+    /** 因为点击 item 时，默认只能展开一个，所以它记录上一次展开的顶层节点 */
+    private last_expand_top_item?: CureSymbolTreeItem;
 
-        所以需要【详细控制每个 tree item】的折叠状态并及时刷新它们的展示，
-        经过测试，使用 view.reveal API 是无法实现折叠的，只能展开，所以我只用它来进行【居中显示】
+    /** 展开 item 并增加一个展开记录，同时折叠其它同层级 items
+     *
+     * @param [refhresh=false] 是否立即刷新
+     */
+    private record_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
+        // 展开顶层节点
+        if (item.IsTopLevel) {
+            if (this.last_expand_top_item && !item.equal(this.last_expand_top_item)) {
+                this._collasep_recorded_item(this.last_expand_top_item.UniqueId);
+                this.set_expand_state(this.last_expand_top_item, false, true);
+            }
+            this.last_expand_top_item = item;
+        }
+        // 展开非顶层节点
+        else {
+            this._collasep_same_level_item(item);
+        }
 
-        所以，当展开一个 item 时，这样做：
-        - 修改它的折叠状态为 true（展开中），刷新 ui
-        - 折叠它的子项，刷新 ui
-        - 折叠它的同层级项，刷新 ui
-        - 居中显示它
-    */
+        this.set_expand_state(item, true, refhresh);
+    }
+
+    /** 折叠 item 并更新记录，折叠它的所有子项 */
+    private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
+        if (item.IsTopLevel) {
+            this.last_expand_top_item = undefined;
+        }
+        this._collasep_recorded_item(item.UniqueId);
+        this.set_expand_state(item, false, refhresh);
+    }
+
+    /** 折叠与 item 同级别的项，并增加 item 的记录 */
+    private _collasep_same_level_item(item: CureSymbolTreeItem) {
+        const parentId = item.parent?.UniqueId;
+        if (!parentId) {
+            return;
+        }
+        const same_level_item = this.expaned_items.get(parentId);
+        if (same_level_item?.equal(item)) {
+            return;
+        }
+        if (same_level_item) {
+            this._collasep_recorded_item(same_level_item.UniqueId);
+            this.set_expand_state(same_level_item, false, true);
+        }
+        this.expaned_items.set(parentId, item);
+    }
+
+    /** 递归折叠 `parentId` 下面的所有子项并更新记录，后续应该手动刷新 ui */
+    private _collasep_recorded_item(parentId: string) {
+        const same_level_item = this.expaned_items.get(parentId);
+        if (same_level_item) {
+            this._collasep_recorded_item(same_level_item.UniqueId);
+            this.set_expand_state(same_level_item, false, false);
+            this.expaned_items.delete(parentId);
+        }
+    }
 
     /** 修改 item 的折叠状态
      * - 如果原来没有折叠状态，则返回 false
@@ -495,6 +559,10 @@ export class CureSymbolTreeItemHandler {
         return ok;
     }
 
+    //#endregion
+
+    //#region 折叠与展开一个item
+
     /** 展开一个 item，并且折叠同级别的 item。如果它已经展开，则折叠它 —— 该 API 仅用于【点击 item】时使用！
      *
      * 其问题如下，均由于 `view.reveal API` 的限制：
@@ -503,21 +571,11 @@ export class CureSymbolTreeItemHandler {
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
     public async expand_only_one(item: CureSymbolTreeItem) {
-        const is_expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
-        const is_none = item.collapsibleState === vscode.TreeItemCollapsibleState.None;
-        const ok = this.set_expand_state(item, !is_expand, true);
-
-        // 现在要展开它，则需要关闭同级别展开的哟
-        if (is_none || (ok && !is_expand)) {
-            const others = item.parent?.Children ?? this.provider.Items;
-            others.forEach((v) => {
-                !v.equal(item) && this.set_expand_state(v, false, false);
-            });
-            // 这里统一刷新
-            const refresh_target = others === this.provider.Items ? undefined : item.parent;
-            this.provider.refresh(refresh_target);
+        if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
+            this.unrecord_expaned_item(item);
+        } else if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+            this.record_expaned_item(item);
         }
-
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
     }
@@ -576,6 +634,7 @@ export class CureSymbolTreeItemHandler {
 
     /** 全部折叠或全部展开 */
     public expand_all(expand: boolean) {
+        this.expaned_items.clear();
         this.set_items_expand(this.provider.Items, expand);
         this.provider.refresh();
     }
