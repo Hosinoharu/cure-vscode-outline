@@ -479,7 +479,10 @@ export class CureSymbolTreeItemHandler {
         view: vscode.TreeView<CureSymbolTreeItem>
     ) {
         const self = new CureSymbolTreeItemHandler(provider, view);
-
+        // 显示在 Title 后面
+        // self.view.description = "description";
+        // 显示在第一个 item 的上面
+        // self.view.message = "message";
         // 当切换到其它页面时，就是【隐藏】咯
         view.onDidChangeVisibility((e) => {
             // console.log("visibility changed:", e.visible);

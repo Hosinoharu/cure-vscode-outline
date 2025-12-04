@@ -243,7 +243,13 @@
           "when": "view == cure-outline-bookmark && viewItem == bookmark_item"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "cure-outline",
+        "contents": "No Symbol Found"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

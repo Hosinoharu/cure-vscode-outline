@@ -375,4 +375,10 @@ export default {
         ],
     },
     menus,
+    viewsWelcome: [
+        {
+            view: "cure-outline",
+            contents: "No Symbol Found In Current File",
+        },
+    ],
 };
