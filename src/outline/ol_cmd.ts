@@ -316,6 +316,13 @@ export class CureSymbolTreeViewCMD {
             this.provider.Items,
             new vscode.Range(line, col, line, col)
         );
+        this.highlight_items(closer_item, "follow_cursor");
+    }
+
+    /** 提取出来的方法，因为 `follow cursor、follow viewport` 都会用到
+     * @param title 用于调试时标记
+     */
+    private highlight_items(closer_item: HighlightItems<CureSymbolTreeItem>, title: string) {
         // 至少有一个，同时需要更新才能继续
         if (!closer_item.first) {
             return this.item_handler.unhilight();
@@ -327,14 +334,14 @@ export class CureSymbolTreeViewCMD {
         let { first, second } = closer_item;
         // 都具备 parent 但不是相同层级！那么将 second 作废吧
         if (first.parent && second?.parent && !first.parent.equal(second.parent)) {
-            console.log("[warn] follow_cursor: parent not equal:", first.name, " - ", second.name);
+            console.log(`[warn] ${title}: parent not equal:`, first.name, "-", second.name);
             second = undefined;
         }
         if (second) {
-            // console.log("follow_cursor", first.name, " - ", second.name);
+            console.log(title, ":", first.name, "-", second.name);
             this.item_handler.highlight(first, second);
         } else {
-            // console.log("follow_cursor:", first.name);
+            console.log(title, ":", first.name);
             this.item_handler.highlight(first);
         }
     }
@@ -379,18 +386,14 @@ export class CureSymbolTreeViewCMD {
         if (ranges.length === 0) {
             return;
         }
+        const top_line = ranges[0].start.line;
         const bottom_line = ranges[0].end.line;
-        // 获取最靠近这一行的 item
+        const center_line = Math.floor((top_line + bottom_line) / 2);
         const closer_item = this.get_closer_item(
             this.provider.Items,
-            new vscode.Range(bottom_line, 0, bottom_line, 0)
+            new vscode.Range(center_line, 0, center_line, 0)
         );
-        // if (closer_item.length === 1) {
-        //     // console.log("follow_viewport:", closer_item[0].name);
-        //     await this.item_handler.highlight(closer_item[0]);
-        // } else if (closer_item.length === 2) {
-        //     await this.item_handler.highlight(closer_item[1]);
-        // }
+        this.highlight_items(closer_item, "follow_viewport");
     }
 
     private register_follow_viewport() {
