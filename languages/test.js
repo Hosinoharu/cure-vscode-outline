@@ -1,11 +1,15 @@
 // #cure-自定义书签
 // #cure-todo-this is a test
 
+// #region 测试结果
+
 // ===== 1. 变量声明 =====
 // 使用不同的变量声明方式
 var globalVar = "我是全局变量"; // 函数作用域
 let blockScopedVar = "我是块级作用域变量"; // 块级作用域
 const CONSTANT_VALUE = "我是常量"; // 常量，不可重新赋值
+
+// #endregion
 
 // #cure-warn this is a test
 
@@ -31,8 +35,8 @@ const person = {
         city: "北京",
         street: "长安街",
         test1: {
-            test2: "value"
-        }
+            test2: "value",
+        },
     },
     // 方法
     introduce() {
@@ -51,7 +55,6 @@ myMap.set("age", 30);
 
 // Set
 const mySet = new Set([1, 2, 3, 4, 4, 5]); // 自动去重
-
 
 // ===== 4. 函数 =====
 // 函数声明

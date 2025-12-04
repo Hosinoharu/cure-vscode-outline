@@ -73,6 +73,20 @@ export class CureBookmarkManager {
 
     /** 解析出自定义标签的正则，直接读取 #cure-xx 后面 xx 的所有内容 */
     private readonly cutstom_format = /#cure-(.*)/;
+    /** 解析 #region 注释 */
+    private readonly region_format = /#region\s*(.*)/;
+
+    /** 从一行文本中解析出自定义的书签，返回匹配的内容以及所在的列 */
+    private parse_format(line: string) {
+        const custom = line.match(this.cutstom_format);
+        if (custom) {
+            return { name: custom[1].trim(), col: custom.index || 0 };
+        }
+        const region = line.match(this.region_format);
+        if (region) {
+            return { name: "R: " + region[1].trim(), col: region.index || 0 };
+        }
+    }
 
     /** 读取文档内容，解析出其中的自定义标签
      * @param uri 指定解析出的书签来自哪里
@@ -89,13 +103,11 @@ export class CureBookmarkManager {
         // 不需要判断是否为注释之类的情况，反正是我自己用
         const result: CureOneSymbol[] = [];
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const match = line.match(this.cutstom_format);
-            if (!match || !match[1]) {
+            const match_result = this.parse_format(lines[i]);
+            if (!match_result) {
                 continue;
             }
-            const name = match[1];
-            const col = match.index || 0;
+            const { name, col } = match_result;
             const symbol = CureOneSymbol.from_custom_bookmark(uri, name, i, col);
             result.push(symbol);
 
