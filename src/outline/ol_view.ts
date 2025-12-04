@@ -206,16 +206,20 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         this.children = v;
     }
 
-    /** 判断 p 是否为当前 item 的 parent */
-    public is_my_parent(p: CureSymbolTreeItem) {
-        let parent = this.parent;
-        while (parent) {
-            if (parent.equal(p)) {
-                return true;
-            }
-            parent = parent.parent;
+    /** 判断 p 是否和 item 具备相同的父节点 */
+    public is_same_top_parent(p: CureSymbolTreeItem) {
+        const a = this.get_top_level();
+        const b = p.get_top_level();
+        return a.equal(b);
+    }
+
+    /** 一直向上找，找到顶层节点 */
+    private get_top_level() {
+        let p = this as CureSymbolTreeItem;
+        while (p.parent) {
+            p = p.parent;
         }
-        return false;
+        return p;
     }
 
     /** 妥协的设计。临时存储一份过滤后的子节点便于后续展示。
@@ -669,8 +673,7 @@ export class CureSymbolTreeItemHandler {
         if (first.equal(h) || second?.equal(h)) {
         } else {
             h.highlighten(false);
-            // 如果当前高亮的 item 是其子项，则不应该折叠，仅需要取消高亮
-            if (!first.is_my_parent(h) || (second && !second.is_my_parent(h))) {
+            if (!first.is_same_top_parent(h) || (second && !second.is_same_top_parent(h))) {
                 // 因为需要取消它的高亮，所以在后面统一刷新，这里仅修改折叠
                 this.unrecord_expaned_item(h, false);
             }
@@ -699,9 +702,6 @@ export class CureSymbolTreeItemHandler {
 
     /** 取消所有高亮 */
     public async unhilight() {
-        if (!this.visible) {
-            return;
-        }
         const { first, second } = this.highlighted;
         first?.highlighten(false);
         second?.highlighten(false);
@@ -719,9 +719,12 @@ export class CureSymbolTreeItemHandler {
         if (!this.visible) {
             return;
         }
+
+        this._highlight(first, second);
+
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
-        // 向上展开 first 的父层级但不刷新 ui —— 当然，如果 first 位于顶层，根本不需要向上展开咯
+        // 向上展开 first 的父层级但不刷新 ui。 如果 first 位于顶层，根本不需要向上展开咯
         if (!first.IsTopLevel) {
             let parent = first;
             while (parent) {
@@ -737,24 +740,22 @@ export class CureSymbolTreeItemHandler {
                 }
                 parent = parent.parent;
             }
-            // #cure-fix-1 根本没有变化、但具备 second，必须让它们的 parent 可刷新！！！
-            if (refresh_item.equal(first) && second) {
-                refresh_item = first.parent!;
-                refresh_item.ready_update();
-            }
         }
-
-        this._highlight(first, second);
 
         if (second) {
             // 具备 second 时，应该高亮 first、second 并且不展开它们！
             this.unrecord_expaned_item(first, false);
             this.unrecord_expaned_item(second, false);
             // 在顶层时，不能通过刷新 first、second 它们的父元素来刷新（因为都在顶层嘛），所以这里手动刷新
-            if (second.IsTopLevel) {
+            if (first.IsTopLevel) {
                 this.provider.refresh(first);
                 this.provider.refresh(second);
             } else {
+                // #cure-fix-1 必须让它们的 parent 可刷新！！！
+                if (refresh_item.equal(first)) {
+                    refresh_item = first.parent!;
+                    refresh_item.ready_update();
+                }
                 this.provider.refresh(refresh_item);
             }
         } else {
