@@ -12,9 +12,9 @@ export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
     // showCollapseAll: true,
 });
 
-async function update_symbol(uri: vscode.Uri) {
+async function update_symbol(doc: vscode.TextDocument) {
     console.log("update_symbol_when_doc_change");
-    await ol_provider.reload_symbol(uri);
+    await ol_provider.reload_symbol(doc);
 }
 const debounced_update_symbol = debounce(update_symbol, 500);
 
@@ -28,13 +28,13 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
-        active_doc && (await debounced_update_symbol(active_doc.uri));
+        active_doc && (await debounced_update_symbol(active_doc));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
         try {
-            e && (await debounced_update_symbol(e.document.uri));
+            e && (await debounced_update_symbol(e.document));
         } catch {}
     });
 

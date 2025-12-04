@@ -40,13 +40,19 @@ export class CureSymbolManager {
 
     //#region 解析文件中原始的符号
 
-    /** 重新解析一个文档！成功则返回 true  */
-    public async update_file(file: vscode.Uri) {
-        this.file = file;
+    /** 重新解析一个文档！成功则返回 true
+     *
+     * @param file 如果外部发现 file 的内容是空的内容，则不解析。
+     * 这是因为某些情况下，文件中没有内容，导致符号解析得到 undefined
+     */
+    public async update_file(file?: vscode.Uri) {
+        this.retry_count = 0;
+        this.symbols = [];
         try {
-            this.retry_count = 0;
-            this.symbols = [];
-            await this.update_symbols();
+            if (file) {
+                this.file = file;
+                await this.update_symbols();
+            }
             return true;
         } catch (e: any) {
             vscode.window.showErrorMessage(`get file symbols error: ${e.message}`);
@@ -64,7 +70,7 @@ export class CureSymbolManager {
             "vscode.executeDocumentSymbolProvider",
             self.file
         );
-
+        // 要么文件没有内容，或者是解析服务还没有完成
         if (symbols === undefined && self.retry_count < self.retry_max) {
             self.retry_count++;
             // 确保解析完成

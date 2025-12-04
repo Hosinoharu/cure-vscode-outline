@@ -440,9 +440,10 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
     }
 
-    /** 重新加载一个文本的符号！ */
-    async reload_symbol(file: vscode.Uri) {
-        const ok = await this.manager.update_file(file);
+    /** 加载一个文档的符号！ */
+    async reload_symbol(doc: vscode.TextDocument) {
+        const uri = doc.getText().trim() === "" ? undefined : doc.uri;
+        const ok = await this.manager.update_file(uri);
         ok && this.reload();
     }
 

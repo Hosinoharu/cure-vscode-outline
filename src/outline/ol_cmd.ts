@@ -80,9 +80,9 @@ export class CureSymbolTreeViewCMD {
     private register_reload_symbol() {
         return vscode.commands.registerCommand(this.cmd_reload_symbol, async () => {
             // 获取当前打开的文档 uri
-            const uri = vscode.window.activeTextEditor?.document.uri;
-            if (uri) {
-                await this.provider.reload_symbol(uri);
+            const doc = vscode.window.activeTextEditor?.document;
+            if (doc) {
+                await this.provider.reload_symbol(doc);
             }
         });
     }
