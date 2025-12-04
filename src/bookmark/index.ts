@@ -10,8 +10,10 @@ export const bm_view = vscode.window.createTreeView(CureBookmarkTreeProvider.id,
     treeDataProvider: bm_provider,
 });
 
-async function update_bookmark(uri: vscode.Uri, content: string) {
+async function update_bookmark(doc: vscode.TextDocument) {
     console.log("update_bookmark_when_doc_change");
+    const uri = doc.uri;
+    const content = doc.getText();
     await bm_provider.reload_bookmark(uri, content);
 }
 const debounced_update_bookmark = debounce(update_bookmark, 500);
@@ -26,13 +28,20 @@ export async function bm_init(ctx: vscode.ExtensionContext) {
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
-        active_doc && (await debounced_update_bookmark(active_doc.uri, active_doc.getText()));
+        active_doc && (await debounced_update_bookmark(active_doc));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
         try {
-            e && (await debounced_update_bookmark(e.document.uri, e.document.getText()));
+            e && (await debounced_update_bookmark(e.document));
+        } catch {}
+    });
+
+    // 监听文件保存
+    vscode.workspace.onDidSaveTextDocument(async (e) => {
+        try {
+            await debounced_update_bookmark(e);
         } catch {}
     });
 }

@@ -38,6 +38,13 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
         } catch {}
     });
 
+    // 监听文件保存
+    vscode.workspace.onDidSaveTextDocument(async (e) => {
+        try {
+            await debounced_update_symbol(e);
+        } catch {}
+    });
+
     // 监听文件修改
     // vscode.workspace.onDidChangeTextDocument(async (e) => {
     //     try {

@@ -247,7 +247,7 @@
     "viewsWelcome": [
       {
         "view": "cure-outline",
-        "contents": "No Symbol Found"
+        "contents": "No Symbol Found In Current File"
       }
     ]
   },
