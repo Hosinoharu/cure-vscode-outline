@@ -370,6 +370,7 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
             this.update_switch_context("follow-cursor-off");
             this.cancel_follow_cursor?.dispose();
+            this.item_handler.unhilight();
         });
     }
 
@@ -419,6 +420,7 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
             this.update_switch_context("follow-viewport-off");
             this.cancel_follow_viewport?.dispose();
+            this.item_handler.unhilight();
         });
     }
 
