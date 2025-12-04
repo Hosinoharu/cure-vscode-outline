@@ -511,6 +511,7 @@ export class CureSymbolTreeItemHandler {
         this.is_follow_viewport_ok = true;
         this.last_expand_top_item = undefined;
         this.expaned_items.clear();
+        this.unhilight();
     }
 
     //#region 关于 follow viewport
@@ -760,6 +761,26 @@ export class CureSymbolTreeItemHandler {
             this.record_expaned_item(refresh_item);
         }
         await this.view.reveal(first);
+    }
+
+    /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */
+    public check_update_highlight(items: HighlightItems<CureSymbolTreeItem>) {
+        const { first, second } = items;
+        const { first: last_first, second: last_second } = this.highlighted;
+
+        let changed = true;
+        if (last_first && first?.equal(last_first)) {
+            changed = false;
+        }
+        if (second) {
+            if (last_second?.equal(second)) {
+                changed = false;
+            } else {
+                // 避免判断 first 时将其取反
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     //#endregion

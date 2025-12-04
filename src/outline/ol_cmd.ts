@@ -307,31 +307,6 @@ export class CureSymbolTreeViewCMD {
             : { first: up_closer_item, second: down_closer_item };
     }
 
-    /** 存储上一次最近的 item，如果光标还在这个范围，则可以避免多余的查询 */
-    private last_closer_item: HighlightItems<CureSymbolTreeItem> = {};
-
-    /** 返回 true 表示更新了。传入的 `items` 一定具备 `first` 项啦 */
-    private update_closer_item(items: HighlightItems<CureSymbolTreeItem>) {
-        const { first, second } = items;
-        const { first: last_first, second: last_second } = this.last_closer_item;
-        this.last_closer_item.first = first;
-        this.last_closer_item.second = second;
-
-        let changed = true;
-        if (last_first && first?.equal(last_first)) {
-            changed = false;
-        }
-        if (second) {
-            if (last_second?.equal(second)) {
-                changed = false;
-            } else {
-                // 避免判断 first 时将其取反
-                changed = true;
-            }
-        }
-        return changed;
-    }
-
     /** 根据鼠标位置，高亮其所在的符号、或者最靠近鼠标的上下两个符号 */
     private async follow_cursor(editor: vscode.TextEditor) {
         const position = editor.selection.active;
@@ -343,10 +318,9 @@ export class CureSymbolTreeViewCMD {
         );
         // 至少有一个，同时需要更新才能继续
         if (!closer_item.first) {
-            this.last_closer_item = {};
             return this.item_handler.unhilight();
         }
-        if (!this.update_closer_item(closer_item)) {
+        if (!this.item_handler.check_update_highlight(closer_item)) {
             return;
         }
 
@@ -357,10 +331,10 @@ export class CureSymbolTreeViewCMD {
             second = undefined;
         }
         if (second) {
-            console.log("follow_cursor", first.name, " - ", second.name);
+            // console.log("follow_cursor", first.name, " - ", second.name);
             this.item_handler.highlight(first, second);
         } else {
-            console.log("follow_cursor:", first.name);
+            // console.log("follow_cursor:", first.name);
             this.item_handler.highlight(first);
         }
     }
