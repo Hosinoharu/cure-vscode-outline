@@ -554,7 +554,7 @@ export class CureSymbolTreeItemHandler {
     /** 因为点击 item 时，默认只能展开一个，所以它记录上一次展开的顶层节点 */
     private last_expand_top_item?: CureSymbolTreeItem;
 
-    /** 展开 item 并增加一个展开记录，同时折叠其它同层级 items
+    /** 展开 item、折叠其它同层级 items，并增加一个记录
      *
      * @param [refhresh=false] 是否立即刷新
      */
@@ -574,7 +574,7 @@ export class CureSymbolTreeItemHandler {
         this.set_expand_state(item, true, refhresh);
     }
 
-    /** 折叠 item 并更新记录，折叠它的所有子项 */
+    /** 折叠 item、以及所有子项，并更新记录 */
     private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
         if (item.IsTopLevel) {
             this.last_expand_top_item = undefined;
@@ -600,18 +600,16 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 递归折叠 `parentId` 下面的所有子项并更新记录，后续应该手动刷新 ui
-     * @returns 返回 true 表示子项被改变了
+     * @returns 返回 true 表示子项被改变了，上层应该标记需要刷新
      */
     private _collasep_recorded_item(parentId: string): boolean {
-        const same_level_item = this.expaned_items.get(parentId);
+        const item = this.expaned_items.get(parentId);
         let changed = false;
-        if (same_level_item) {
-            this.set_expand_state(same_level_item, false, false);
+        if (item) {
+            this.set_expand_state(item, false, false);
             this.expaned_items.delete(parentId);
-
-            changed =
-                this._collasep_recorded_item(same_level_item.UniqueId) ||
-                same_level_item.should_refresh;
+            // 递归折叠子项
+            changed = this._collasep_recorded_item(item.UniqueId) || item.should_refresh;
         }
         return changed;
     }
@@ -642,10 +640,7 @@ export class CureSymbolTreeItemHandler {
 
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
-        }
-        // 这里并没有使用 if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed)
-        // 因为这个 API 中还可以折叠同级别的其它 item 啦
-        else {
+        } else {
             this.record_expaned_item(item);
         }
         // 启用 focus 可以让该 item 展示在视图的中间
@@ -670,10 +665,14 @@ export class CureSymbolTreeItemHandler {
         if (exist) {
             return;
         }
-        first?.highlighten(false);
-        // 如果 curr_item 是 first 的子项，那么不需要折叠 first 哟
-        if (first && !curr_item.is_my_parent(first)) {
-            this.unrecord_expaned_item(first);
+        if (first) {
+            first.highlighten(false);
+            // 如果 curr_item 是 first 的子项，那么不需要折叠 first 哟
+            if (!curr_item.is_my_parent(first)) {
+                // 因为需要取消它的高亮，所以在后面统一刷新，这里仅修改折叠
+                this.unrecord_expaned_item(first, false);
+            }
+            this.provider.refresh(first);
         }
         curr_item.highlighten(true);
         this.highlighted_items.first = curr_item;
@@ -686,9 +685,14 @@ export class CureSymbolTreeItemHandler {
         }
         // 展开各层级但不刷新 ui
         let parent = item;
+        /** 记录最后应该刷新的 item */
+        let refresh_item = item;
         if (!parent.IsTopLevel) {
             while (parent) {
                 this.record_expaned_item(parent, false);
+                if (parent.should_refresh) {
+                    refresh_item = parent;
+                }
                 if (!parent.parent) {
                     break;
                 }
@@ -696,8 +700,7 @@ export class CureSymbolTreeItemHandler {
             }
         }
         this._highlight(item);
-        item !== parent && parent.ready_update();
-        this.record_expaned_item(parent);
+        this.record_expaned_item(refresh_item);
         // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
         await this.view.reveal(item);
     }
