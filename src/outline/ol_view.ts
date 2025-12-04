@@ -720,8 +720,6 @@ export class CureSymbolTreeItemHandler {
             return;
         }
 
-        this._highlight(first, second);
-
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
         // 向上展开 first 的父层级但不刷新 ui。 如果 first 位于顶层，根本不需要向上展开咯
@@ -742,6 +740,7 @@ export class CureSymbolTreeItemHandler {
             }
         }
 
+        this._highlight(first, second);
         if (second) {
             // 具备 second 时，应该高亮 first、second 并且不展开它们！
             this.unrecord_expaned_item(first, false);
