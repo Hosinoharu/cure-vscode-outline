@@ -107,6 +107,23 @@ export class CureOneSymbol {
         );
     }
 
+    /** 创建 #region 定义的书签 */
+    static from_region_bookmark(
+        uri: vscode.Uri,
+        name: string,
+        line: number,
+        col: number
+    ): CureOneSymbol {
+        return new CureOneSymbol(
+            uri,
+            name,
+            "CureRegion",
+            CureOneSymbol.create_line_info(line, col),
+            new vscode.Range(line, col, line, col),
+            new vscode.Range(line, col, line, col)
+        );
+    }
+
     public get Children(): CureOneSymbol[] {
         if (this.children === undefined) {
             this.children = this._children.map((v) => CureOneSymbol.from_raw_symbol(this.uri, v));
@@ -173,9 +190,7 @@ export class CureOneSymbol {
         // 处理自定义的 symbol kind
         if (this.kind === "CureRegion") {
             return new vscode.ThemeColor("symbolIcon.namespaceForeground");
-        } else if (this.kind === "CureLineBookmark") {
-            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
-        } else if (this.kind === "CureCustomBookmark") {
+        } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
             return new vscode.ThemeColor("symbolIcon.namespaceForeground");
         }
 

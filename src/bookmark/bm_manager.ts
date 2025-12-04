@@ -80,11 +80,11 @@ export class CureBookmarkManager {
     private parse_format(line: string) {
         const custom = line.match(this.cutstom_format);
         if (custom) {
-            return { name: custom[1].trim(), col: custom.index || 0 };
+            return { name: custom[1].trim(), col: custom.index || 0, custom: true };
         }
         const region = line.match(this.region_format);
         if (region) {
-            return { name: "R: " + region[1].trim(), col: region.index || 0 };
+            return { name: region[1].trim(), col: region.index || 0 };
         }
     }
 
@@ -107,8 +107,10 @@ export class CureBookmarkManager {
             if (!match_result) {
                 continue;
             }
-            const { name, col } = match_result;
-            const symbol = CureOneSymbol.from_custom_bookmark(uri, name, i, col);
+            const { name, col, custom } = match_result;
+            const symbol = custom
+                ? CureOneSymbol.from_custom_bookmark(uri, name, i, col)
+                : CureOneSymbol.from_region_bookmark(uri, name, i, col);
             result.push(symbol);
 
             this.add_gutter_icon(i);
