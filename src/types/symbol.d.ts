@@ -65,3 +65,14 @@ type FollowCmdType = FollowType | `${FollowType}-off`;
 type SwitchCmdType = ExpandCmdType | SortCmdType | FilterCmdType | FollowCmdType;
 
 //#endregion
+
+/** 表示在 `follow cursor` 与 `follow viewport` 时需要高亮元素。
+ *
+ * - 只有一个高亮元素时，`first` 为该元素，它表示当前就位于该符号中
+ * - 有两个高亮元素时，它表示当前位于 `first、second` 之间
+ * - 至少要有一个高亮元素！
+ */
+type HighlightItems<T> = {
+    first?: T;
+    second?: T;
+};

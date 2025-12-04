@@ -6,7 +6,7 @@
 import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
 import { debounce, throttle } from "../common";
-import { OutlineSortType, SwitchCmdType } from "../types/symbol";
+import { HighlightItems, OutlineSortType, SwitchCmdType } from "../types/symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
 export class CureSymbolTreeViewCMD {
@@ -262,7 +262,7 @@ export class CureSymbolTreeViewCMD {
     private get_closer_item(
         _items: CureSymbolTreeItem[],
         range: vscode.Range
-    ): CureSymbolTreeItem[] {
+    ): HighlightItems<CureSymbolTreeItem> {
         // 需要先对 items 进行复制，然后按位置排序
         // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
         const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
@@ -274,7 +274,7 @@ export class CureSymbolTreeViewCMD {
 
         // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
         if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
-            return [];
+            return {};
         }
 
         for (const item of items) {
@@ -283,9 +283,9 @@ export class CureSymbolTreeViewCMD {
                 // 继续向下查看是在哪个子元素中
                 if (item.Children.length > 0) {
                     const sub_result = this.get_closer_item(item.Children, range);
-                    return sub_result.length === 0 ? [item] : sub_result;
+                    return sub_result.first === undefined ? { first: item } : sub_result;
                 }
-                return [item];
+                return { first: item };
             }
             // 更新最靠近的 item 咯
             else {
@@ -303,32 +303,36 @@ export class CureSymbolTreeViewCMD {
         }
 
         return up_closer_item.equal(down_closer_item)
-            ? [up_closer_item]
-            : [up_closer_item, down_closer_item];
+            ? { first: up_closer_item }
+            : { first: up_closer_item, second: down_closer_item };
     }
 
     /** 存储上一次最近的 item，如果光标还在这个范围，则可以避免多余的查询 */
-    private last_closer_item: CureSymbolTreeItem[] = [];
+    private last_closer_item: HighlightItems<CureSymbolTreeItem> = {};
 
-    /** 返回 true 表示更新了 */
-    private update_closer_item(items: CureSymbolTreeItem[]) {
+    /** 返回 true 表示更新了。传入的 `items` 一定具备 `first` 项啦 */
+    private update_closer_item(items: HighlightItems<CureSymbolTreeItem>) {
         let result = true;
-        if (items.length === this.last_closer_item.length) {
-            const equal =
-                items[0]?.equal(this.last_closer_item[0]) &&
-                items[1]?.equal(this.last_closer_item[1]);
-            result = !equal;
+        const { first, second } = items;
+        const { first: last_first, second: last_second } = this.last_closer_item;
+        if (first && last_first?.equal(first)) {
+            result = false;
+        } else {
+            this.last_closer_item.first = first;
         }
-        if (result) {
-            this.last_closer_item = items;
+        if (second) {
+            if (last_second?.equal(second)) {
+                result = false;
+            } else {
+                this.last_closer_item.second = second;
+                // 避免第一次判断时将其取反
+                result = true;
+            }
         }
         return result;
     }
 
-    // #cure-warn 编辑文档时，会更新符号，然后才能高亮
-    // 现在的实现上，会有一个【闪烁】
-    // 考虑：读取【follow by cursor】配置项，在获取树节点时，从而可以更新它们的折叠状态
-    // 等更新完状态之后，再执行【高亮】？但当前的高亮会强制切换到 outline view 上
+    /** 根据鼠标位置，高亮其所在的符号、或者最靠近鼠标的上下两个符号 */
     private async follow_cursor(editor: vscode.TextEditor) {
         const position = editor.selection.active;
         const line = position.line;
@@ -337,18 +341,15 @@ export class CureSymbolTreeViewCMD {
             this.provider.Items,
             new vscode.Range(line, col, line, col)
         );
-
-        if (!this.update_closer_item(closer_item)) {
+        // 至少有一个，同时需要更新才能继续
+        if (!closer_item.first || !this.update_closer_item(closer_item)) {
             return;
         }
 
-        if (closer_item.length === 1) {
-            // console.log("follow_cursor:", closer_item[0].name);
-            await this.item_handler.highlight(closer_item[0]);
-        } else if (closer_item.length === 2) {
-            // console.log("follow_cursor", closer_item[0].name, " and ", closer_item[1].name);
-            this.item_handler.highlight(closer_item[0]);
-            this.item_handler.highlight(closer_item[1]);
+        if (closer_item.second) {
+            console.log("follow_cursor", closer_item.first.name, " - ", closer_item.second.name);
+        } else {
+            console.log("follow_cursor:", closer_item.first.name);
         }
     }
 
@@ -398,12 +399,12 @@ export class CureSymbolTreeViewCMD {
             this.provider.Items,
             new vscode.Range(bottom_line, 0, bottom_line, 0)
         );
-        if (closer_item.length === 1) {
-            // console.log("follow_viewport:", closer_item[0].name);
-            await this.item_handler.highlight(closer_item[0]);
-        } else if (closer_item.length === 2) {
-            await this.item_handler.highlight(closer_item[1]);
-        }
+        // if (closer_item.length === 1) {
+        //     // console.log("follow_viewport:", closer_item[0].name);
+        //     await this.item_handler.highlight(closer_item[0]);
+        // } else if (closer_item.length === 2) {
+        //     await this.item_handler.highlight(closer_item[1]);
+        // }
     }
 
     private register_follow_viewport() {

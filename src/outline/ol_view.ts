@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import crypto from "crypto";
 import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureSymbolManager } from "./ol_manager";
-import { OutlineFilterType, OutlineSortType, TreeItemType } from "../types/symbol";
+import { HighlightItems, OutlineFilterType, OutlineSortType, TreeItemType } from "../types/symbol";
 import { set_context_value } from "../common";
 
 /** 表示符号 tree view 的 item */
@@ -614,10 +614,13 @@ export class CureSymbolTreeItemHandler {
         return changed;
     }
 
-    /** 修改 item 的折叠状态
+    /** 修改 item 的折叠状态，同时承担刷新 ui 的职责
      * @param refhresh 为 true 则立即刷新，否则需要手续手动刷新
      */
     private set_expand_state(item: CureSymbolTreeItem, expand: boolean, refresh: boolean) {
+        // 如果这里使用 item.xx === None 然后直接返回，那么将不会刷新 ui
+        // 假如当前 item 修改了高亮元素，结果因为它无法折叠，所以不会刷新 ui
+        // 所以！本函数一定要尝试刷新 ui 才行
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
@@ -652,30 +655,27 @@ export class CureSymbolTreeItemHandler {
 
     //#region 高亮item
 
-    /** 记录当前高亮的 provider，最多有两个 */
-    private readonly highlighted_items: {
-        first?: CureSymbolTreeItem;
-        second?: CureSymbolTreeItem;
-    } = {};
+    /** 记录当前高亮的 item */
+    private readonly highlighted: HighlightItems<CureSymbolTreeItem> = {};
 
     /** 取消之前的高亮并高亮当前 item */
-    private _highlight(curr_item: CureSymbolTreeItem) {
-        const { first } = this.highlighted_items;
-        const exist = first && first.equal(curr_item);
+    private _highlight(item: CureSymbolTreeItem) {
+        const { first } = this.highlighted;
+        const exist = first && first.equal(item);
         if (exist) {
             return;
         }
         if (first) {
             first.highlighten(false);
-            // 如果 curr_item 是 first 的子项，那么不需要折叠 first 哟
-            if (!curr_item.is_my_parent(first)) {
+            // 如果 item 是 first 的子项，那么不需要折叠 first 哟
+            if (!item.is_my_parent(first)) {
                 // 因为需要取消它的高亮，所以在后面统一刷新，这里仅修改折叠
                 this.unrecord_expaned_item(first, false);
             }
             this.provider.refresh(first);
         }
-        curr_item.highlighten(true);
-        this.highlighted_items.first = curr_item;
+        item.highlighten(true);
+        this.highlighted.first = item;
     }
 
     /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
