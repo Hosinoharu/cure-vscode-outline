@@ -783,6 +783,9 @@ export class CureSymbolTreeItemHandler {
                 // 避免判断 first 时将其取反
                 changed = true;
             }
+        } else if (last_second) {
+            // 没有 second，但以前有，说明之前的被移除了
+            changed = true;
         }
         return changed;
     }
