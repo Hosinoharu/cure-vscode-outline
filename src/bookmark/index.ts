@@ -11,6 +11,9 @@ export const bm_view = vscode.window.createTreeView(CureBookmarkTreeProvider.id,
 });
 
 async function update_bookmark(doc: vscode.TextDocument) {
+    if (!bm_view.visible) {
+        return;
+    }
     console.log("update_bookmark_when_doc_change");
     const uri = doc.uri;
     const content = doc.getText();

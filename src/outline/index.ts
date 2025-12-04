@@ -13,6 +13,9 @@ export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
 });
 
 async function update_symbol(doc: vscode.TextDocument) {
+    if (!ol_view.visible) {
+        return;
+    }
     console.log("update_symbol_when_doc_change");
     await ol_provider.reload_symbol(doc);
 }
