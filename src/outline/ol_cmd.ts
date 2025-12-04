@@ -312,24 +312,24 @@ export class CureSymbolTreeViewCMD {
 
     /** 返回 true 表示更新了。传入的 `items` 一定具备 `first` 项啦 */
     private update_closer_item(items: HighlightItems<CureSymbolTreeItem>) {
-        let result = true;
         const { first, second } = items;
         const { first: last_first, second: last_second } = this.last_closer_item;
-        if (first && last_first?.equal(first)) {
-            result = false;
-        } else {
-            this.last_closer_item.first = first;
+        this.last_closer_item.first = first;
+        this.last_closer_item.second = second;
+
+        let changed = true;
+        if (last_first && first?.equal(last_first)) {
+            changed = false;
         }
         if (second) {
             if (last_second?.equal(second)) {
-                result = false;
+                changed = false;
             } else {
-                this.last_closer_item.second = second;
-                // 避免第一次判断时将其取反
-                result = true;
+                // 避免判断 first 时将其取反
+                changed = true;
             }
         }
-        return result;
+        return changed;
     }
 
     /** 根据鼠标位置，高亮其所在的符号、或者最靠近鼠标的上下两个符号 */
@@ -342,14 +342,26 @@ export class CureSymbolTreeViewCMD {
             new vscode.Range(line, col, line, col)
         );
         // 至少有一个，同时需要更新才能继续
-        if (!closer_item.first || !this.update_closer_item(closer_item)) {
+        if (!closer_item.first) {
+            this.last_closer_item = {};
+            return this.item_handler.unhilight();
+        }
+        if (!this.update_closer_item(closer_item)) {
             return;
         }
 
-        if (closer_item.second) {
-            console.log("follow_cursor", closer_item.first.name, " - ", closer_item.second.name);
+        let { first, second } = closer_item;
+        // 都具备 parent 但不是相同层级！那么将 second 作废吧
+        if (first.parent && second?.parent && !first.parent.equal(second.parent)) {
+            console.log("[warn] follow_cursor: parent not equal:", first.name, " - ", second.name);
+            second = undefined;
+        }
+        if (second) {
+            console.log("follow_cursor", first.name, " - ", second.name);
+            this.item_handler.highlight(first, second);
         } else {
-            console.log("follow_cursor:", closer_item.first.name);
+            console.log("follow_cursor:", first.name);
+            this.item_handler.highlight(first);
         }
     }
 

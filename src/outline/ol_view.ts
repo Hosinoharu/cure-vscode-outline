@@ -658,37 +658,75 @@ export class CureSymbolTreeItemHandler {
     /** 记录当前高亮的 item */
     private readonly highlighted: HighlightItems<CureSymbolTreeItem> = {};
 
-    /** 取消之前的高亮并高亮当前 item */
-    private _highlight(item: CureSymbolTreeItem) {
-        const { first } = this.highlighted;
-        const exist = first && first.equal(item);
-        if (exist) {
-            return;
-        }
-        if (first) {
-            first.highlighten(false);
-            // 如果 item 是 first 的子项，那么不需要折叠 first 哟
-            if (!item.is_my_parent(first)) {
+    /** 整理出来的方法。现在需要取消 item `h` 的高亮，需要传入另外两个当前需要高亮的 item */
+    private _unhighlight(
+        h: CureSymbolTreeItem,
+        first: CureSymbolTreeItem,
+        second?: CureSymbolTreeItem
+    ) {
+        // 发现重复，不需要处理
+        if (first.equal(h) || second?.equal(h)) {
+        } else {
+            h.highlighten(false);
+            // 如果当前高亮的 item 是其子项，则不应该折叠，仅需要取消高亮
+            if (!first.is_my_parent(h) || (second && !second.is_my_parent(h))) {
                 // 因为需要取消它的高亮，所以在后面统一刷新，这里仅修改折叠
-                this.unrecord_expaned_item(first, false);
+                this.unrecord_expaned_item(h, false);
             }
-            this.provider.refresh(first);
+            this.provider.refresh(h);
         }
-        item.highlighten(true);
-        this.highlighted.first = item;
     }
 
-    /** 在 follow cursor 时，高亮一个 item，折叠其它的 item！ */
-    public async highlight(item: CureSymbolTreeItem) {
+    /** 取消之前的高亮并高亮当前 item，最多两个 item 并且一定不相同 */
+    private _highlight(first: CureSymbolTreeItem, second?: CureSymbolTreeItem) {
+        // 外部保证 first 和 second 是相同层级的
+        const last_first = this.highlighted.first;
+        this.highlighted.first = first;
+        const last_second = this.highlighted.second;
+        this.highlighted.second = second;
+
+        // 高亮成功，说明 first 是新加入的
+        if (first.highlighten(true)) {
+        }
+        // 高亮成功，说明 second 是新加入的
+        if (second?.highlighten(true)) {
+        }
+        // 需要对之前的 item 取消高亮
+        last_first && this._unhighlight(last_first, first, second);
+        last_second && this._unhighlight(last_second, first, second);
+    }
+
+    /** 取消所有高亮 */
+    public async unhilight() {
         if (!this.visible) {
             return;
         }
-        // 展开各层级但不刷新 ui
-        let parent = item;
-        /** 记录最后应该刷新的 item */
-        let refresh_item = item;
-        if (!parent.IsTopLevel) {
+        const { first, second } = this.highlighted;
+        first?.highlighten(false);
+        second?.highlighten(false);
+        this.highlighted.first = undefined;
+        this.highlighted.second = undefined;
+        this.provider.refresh(first);
+        this.provider.refresh(second);
+    }
+
+    /** 在 follow cursor 时，高亮 item，折叠其它的 item！
+     *
+     * 最多高亮两个 item 哟，它们都是相同层级
+     */
+    public async highlight(first: CureSymbolTreeItem, second?: CureSymbolTreeItem) {
+        if (!this.visible) {
+            return;
+        }
+        /** 记录最后应该刷新的顶层 item */
+        let refresh_item = first;
+        // 向上展开 first 的父层级但不刷新 ui —— 当然，如果 first 位于顶层，根本不需要向上展开咯
+        if (!first.IsTopLevel) {
+            let parent = first;
             while (parent) {
+                // 问题：如果当前 item 的 parent 是展开的，
+                // 那么不会修改任何状态，根据不会刷新呀！
+                // 后面在 #cure-fix-1 进行解决！
                 this.record_expaned_item(parent, false);
                 if (parent.should_refresh) {
                     refresh_item = parent;
@@ -698,11 +736,30 @@ export class CureSymbolTreeItemHandler {
                 }
                 parent = parent.parent;
             }
+            // #cure-fix-1 根本没有变化、但具备 second，必须让它们的 parent 可刷新！！！
+            if (refresh_item.equal(first) && second) {
+                refresh_item = first.parent!;
+                refresh_item.ready_update();
+            }
         }
-        this._highlight(item);
-        this.record_expaned_item(refresh_item);
-        // 该 API 会强制切换到 tree view 上！也就是说会强制视图切换
-        await this.view.reveal(item);
+
+        this._highlight(first, second);
+
+        if (second) {
+            // 具备 second 时，应该高亮 first、second 并且不展开它们！
+            this.unrecord_expaned_item(first, false);
+            this.unrecord_expaned_item(second, false);
+            // 在顶层时，不能通过刷新 first、second 它们的父元素来刷新（因为都在顶层嘛），所以这里手动刷新
+            if (second.IsTopLevel) {
+                this.provider.refresh(first);
+                this.provider.refresh(second);
+            } else {
+                this.provider.refresh(refresh_item);
+            }
+        } else {
+            this.record_expaned_item(refresh_item);
+        }
+        await this.view.reveal(first);
     }
 
     //#endregion
