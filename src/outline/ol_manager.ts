@@ -43,6 +43,14 @@ export class CureSymbolManager {
 
     //#region 解析文件中原始的符号
 
+    /** 在重新解析文件之前需要进行判断：
+     * - 如果本次解析的文件上次解析的文件相同，那么应该调用 `get_diff_info()` 获取差异信息，然后更新符号树
+     * - 如果本次解析的文件上次解析的文件不同，那么应该调用 `update_file()` 更新整个符号树
+     */
+    public is_same_file(file: vscode.Uri) {
+        return this.file?.fsPath === file.fsPath;
+    }
+
     /** 重新解析一个文档！成功则返回 true
      *
      * @param file 如果外部发现 file 的内容是空的内容，则不解析。
@@ -61,6 +69,14 @@ export class CureSymbolManager {
             vscode.window.showErrorMessage(`get file symbols error: ${e.message}`);
             return false;
         }
+    }
+
+    /** 获取和上次解析符号时的差异信息，用于更新符号树
+     * @requires - 返回 undefined 表示没有差异
+     */
+    public async get_diff_info() {
+        console.log("get_diff_info todo");
+        return undefined;
     }
 
     /** 更新文档中的符号列表 */
