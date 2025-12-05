@@ -517,7 +517,7 @@ export class CureSymbolTreeItemHandler {
     /** 重置内部一些状态 */
     public reset_state() {
         this.is_follow_viewport_ok = true;
-        this.last_expand_top_item = undefined;
+        this.last_expand_top_items = [];
         this.expaned_items.clear();
         this.unhilight();
     }
@@ -560,8 +560,12 @@ export class CureSymbolTreeItemHandler {
      * 2. 当展开 B 时，如果它也是顶层节点，则折叠 `last_expand_top_item` 并刷新
      */
     private readonly expaned_items: Map<string, CureSymbolTreeItem> = new Map();
-    /** 因为点击 item 时，默认只能展开一个，所以它记录上一次展开的顶层节点 */
-    private last_expand_top_item?: CureSymbolTreeItem;
+    /** 因为点击 item 时，默认只能展开一个，所以它记录上一次展开的顶层节点。
+     * 由于异步事件时会频繁触发，所以使用**队列**来模拟。
+     * - 展开一个顶层节点时，先折叠里面的所有的 item
+     * - 然后将将其入队列
+     */
+    private last_expand_top_items: CureSymbolTreeItem[] = [];
 
     /** 展开 item、折叠其它同层级 items，并增加一个记录
      *
@@ -570,10 +574,13 @@ export class CureSymbolTreeItemHandler {
     private record_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
         // 展开顶层节点
         if (item.IsTopLevel) {
-            if (this.last_expand_top_item && !item.equal(this.last_expand_top_item)) {
-                this.unrecord_expaned_item(this.last_expand_top_item, true);
-            }
-            this.last_expand_top_item = item;
+            do {
+                const last_top_item = this.last_expand_top_items.shift();
+                if (last_top_item && !item.equal(last_top_item)) {
+                    this.unrecord_expaned_item(last_top_item, true);
+                }
+            } while (this.last_expand_top_items.length > 0);
+            this.last_expand_top_items.push(item);
         }
         // 展开非顶层节点，那么先折叠同层级的
         else {
@@ -586,7 +593,7 @@ export class CureSymbolTreeItemHandler {
     /** 折叠 item、以及所有子项，并更新记录 */
     private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
         if (item.IsTopLevel) {
-            this.last_expand_top_item = undefined;
+            this.last_expand_top_items = this.last_expand_top_items.filter((i) => !i.equal(item));
         }
         if (this._collasep_recorded_item(item.UniqueId)) {
             item.ready_update();
