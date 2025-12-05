@@ -797,7 +797,7 @@ export class CureSymbolTreeItemHandler {
         } else {
             this.record_expaned_item(refresh_item);
         }
-        await this.view.reveal(first);
+        await this.view.reveal(second ?? first);
     }
 
     /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */

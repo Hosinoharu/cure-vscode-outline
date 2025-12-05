@@ -54,36 +54,6 @@ export function debounce_sync<T extends (...args: any[]) => void>(
     };
 }
 
-/**
- * 节流函数（在节流窗口结束时执行）
- * @param func 要执行的函数
- * @param delay 节流时间间隔(毫秒)
- * @returns 包装后的节流函数
- */
-export function throttle<T extends (...args: any[]) => any>(
-    func: T,
-    delay: number
-): (...args: Parameters<T>) => void {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let lastArgs: Parameters<T> | null = null;
-    let lastThis: any;
-
-    return function (this: any, ...args: Parameters<T>): void {
-        lastArgs = args;
-        lastThis = this;
-
-        if (!timeoutId) {
-            timeoutId = setTimeout(() => {
-                if (lastArgs) {
-                    func.apply(lastThis, lastArgs);
-                    lastArgs = null;
-                    timeoutId = null;
-                }
-            }, delay);
-        }
-    };
-}
-
 /** 统一设置 tree item 的 context value，避免其它地方赋值出错！ */
 export function set_context_value(item: vscode.TreeItem, type: TreeItemType) {
     item.contextValue = type;

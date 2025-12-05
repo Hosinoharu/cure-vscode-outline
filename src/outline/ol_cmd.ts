@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
-import { debounce, throttle } from "../common";
+import { debounce } from "../common";
 import { HighlightItems, OutlineSortType, SwitchCmdType } from "../types/symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
@@ -398,7 +398,7 @@ export class CureSymbolTreeViewCMD {
     }
 
     private register_follow_viewport() {
-        const throttle_follow_viewport = throttle(this.follow_viewport.bind(this), 200);
+        const throttle_follow_viewport = debounce(this.follow_viewport.bind(this), 200);
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
             this.update_switch_context("follow-viewport");
             // 先折叠所有，然后根据当前位置，展开最近的 item
