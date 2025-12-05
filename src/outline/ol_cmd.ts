@@ -352,9 +352,6 @@ export class CureSymbolTreeViewCMD {
         const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 200);
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
-            // 先折叠所有，然后根据当前鼠标位置，展开最近的 item
-            this.update_switch_context("expand-all-off");
-            this.item_handler.expand_all(false);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_cursor(editor);
 
@@ -401,9 +398,6 @@ export class CureSymbolTreeViewCMD {
         const debounce_follow_viewport = debounce(this.follow_viewport.bind(this), 200);
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
             this.update_switch_context("follow-viewport");
-            // 先折叠所有，然后根据当前位置，展开最近的 item
-            this.update_switch_context("expand-all-off");
-            this.item_handler.expand_all(false);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_viewport(editor);
 
