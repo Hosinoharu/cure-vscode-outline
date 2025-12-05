@@ -206,7 +206,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         this.children = v;
     }
 
-    /** 判断 p 是否和 item 具备相同的父节点 */
+    /** 判断 p 是否和 item 具备相同的顶层节点 */
     public is_same_top_parent(p: CureSymbolTreeItem) {
         const a = this.get_top_level();
         const b = p.get_top_level();
@@ -572,37 +572,62 @@ export class CureSymbolTreeItemHandler {
      * @param [refhresh=false] 是否立即刷新
      */
     private record_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
+        const is_top_expaned = this._collapse_other_top_level_item(item);
         // 展开顶层节点
         if (item.IsTopLevel) {
-            do {
-                const last_top_item = this.last_expand_top_items.shift();
-                if (last_top_item && !item.equal(last_top_item)) {
-                    this.unrecord_expaned_item(last_top_item, true);
-                }
-            } while (this.last_expand_top_items.length > 0);
-            this.last_expand_top_items.push(item);
+            if (!is_top_expaned) {
+                this.last_expand_top_items.push(item);
+            }
         }
         // 展开非顶层节点，那么先折叠同层级的
         else {
-            this._collasep_same_level_item(item);
+            this._collapase_same_level_item(item);
         }
 
         this.set_expand_state(item, true, refhresh);
     }
 
-    /** 折叠 item、以及所有子项，并更新记录 */
-    private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
-        if (item.IsTopLevel) {
+    /** 折叠 item、以及所有子项，并更新记录
+     *
+     * @param [from_record=false] 为 `true` 表示由外部过滤了该 top item，通常情况下忽略该参数
+     */
+    private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true, from_record = false) {
+        if (item.IsTopLevel && !from_record) {
             this.last_expand_top_items = this.last_expand_top_items.filter((i) => !i.equal(item));
         }
-        if (this._collasep_recorded_item(item.UniqueId)) {
+        if (this._collapase_recorded_item(item.UniqueId)) {
             item.ready_update();
         }
         this.set_expand_state(item, false, refhresh);
     }
 
+    /** 除了 item 所在的 top item，其它的 top item 都要折叠
+     *
+     * @returns 返回 true 表示 item 所在的 top item 已经展开了哟
+     */
+    private _collapse_other_top_level_item(item: CureSymbolTreeItem) {
+        let result = false;
+        let item_top_parent;
+        do {
+            const other_top_item = this.last_expand_top_items.shift();
+            if (other_top_item) {
+                if (item.is_same_top_parent(other_top_item)) {
+                    result = true;
+                    item_top_parent = other_top_item;
+                    continue;
+                }
+                this.unrecord_expaned_item(other_top_item, true, true);
+            }
+        } while (this.last_expand_top_items.length > 0);
+        // 原本的 item 被移除了，现在要重新放回去
+        if (result && item_top_parent) {
+            this.last_expand_top_items.push(item_top_parent);
+        }
+        return result;
+    }
+
     /** 折叠与 item 同级别的项，并增加 item 的记录 */
-    private _collasep_same_level_item(item: CureSymbolTreeItem) {
+    private _collapase_same_level_item(item: CureSymbolTreeItem) {
         const parentId = item.parent?.UniqueId;
         if (!parentId) {
             return;
@@ -618,14 +643,14 @@ export class CureSymbolTreeItemHandler {
     /** 递归折叠 `parentId` 下面的所有子项并更新记录，后续应该手动刷新 ui
      * @returns 返回 true 表示子项被改变了，上层应该标记需要刷新
      */
-    private _collasep_recorded_item(parentId: string): boolean {
+    private _collapase_recorded_item(parentId: string): boolean {
         const item = this.expaned_items.get(parentId);
         let changed = false;
         if (item) {
             this.set_expand_state(item, false, false);
             this.expaned_items.delete(parentId);
             // 递归折叠子项
-            changed = this._collasep_recorded_item(item.UniqueId) || item.should_refresh;
+            changed = this._collapase_recorded_item(item.UniqueId) || item.should_refresh;
         }
         return changed;
     }
@@ -758,6 +783,7 @@ export class CureSymbolTreeItemHandler {
             this.unrecord_expaned_item(second, false);
             // 在顶层时，不能通过刷新 first、second 它们的父元素来刷新（因为都在顶层嘛），所以这里手动刷新
             if (first.IsTopLevel) {
+                this._collapse_other_top_level_item(first);
                 this.provider.refresh(first);
                 this.provider.refresh(second);
             } else {
