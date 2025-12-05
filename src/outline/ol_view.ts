@@ -397,6 +397,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             if (!item.should_refresh) {
                 return;
             }
+            // console.log("refresh item:", item.name);
             item.should_refresh = false;
         }
         this._onDidChangeTreeData.fire(item);
@@ -762,9 +763,6 @@ export class CureSymbolTreeItemHandler {
         if (!first.IsTopLevel) {
             let parent = first;
             while (parent) {
-                // 问题：如果当前 item 的 parent 是展开的，
-                // 那么不会修改任何状态，根据不会刷新呀！
-                // 后面在 #cure-fix-1 进行解决！
                 this.record_expaned_item(parent, false);
                 if (parent.should_refresh) {
                     refresh_item = parent;
@@ -784,14 +782,12 @@ export class CureSymbolTreeItemHandler {
             // 在顶层时，不能通过刷新 first、second 它们的父元素来刷新（因为都在顶层嘛），所以这里手动刷新
             if (first.IsTopLevel) {
                 this._collapse_other_top_level_item(first);
+            }
+            // 这里保持最小化刷新
+            if (refresh_item.equal(first)) {
                 this.provider.refresh(first);
                 this.provider.refresh(second);
             } else {
-                // #cure-fix-1 必须让它们的 parent 可刷新！！！
-                if (refresh_item.equal(first)) {
-                    refresh_item = first.parent!;
-                    refresh_item.ready_update();
-                }
                 this.provider.refresh(refresh_item);
             }
         } else {
