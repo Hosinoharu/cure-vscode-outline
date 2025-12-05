@@ -19,7 +19,7 @@ async function update_bookmark(doc: vscode.TextDocument) {
     const content = doc.getText();
     await bm_provider.reload_bookmark(uri, content);
 }
-const debounced_update_bookmark = debounce(update_bookmark, 500);
+const debounced_update_bookmark = debounce(update_bookmark, 200);
 
 /** 在启动插件时，获取当前打开的文档并初始化 bookmark。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改
