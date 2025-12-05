@@ -21,10 +21,13 @@ export class CureSymbolManager {
 
     /** 要解析的文件路径 */
     private file?: vscode.Uri;
-    private symbols: CureOneSymbol[] = [];
+    /** 保存上一次解析出的原始符号 */
+    private symbols: vscode.DocumentSymbol[] = [];
     /** 解析出的文件符号咯 */
     public get Symbols() {
-        return this.file ? this.symbols : [];
+        return this.file
+            ? this.symbols.map((v) => CureOneSymbol.from_raw_symbol(this.file!, v))
+            : [];
     }
 
     //#region 解析的重试
@@ -80,9 +83,7 @@ export class CureSymbolManager {
                 }, self.retry_interval);
             });
         } else {
-            self.symbols = symbols
-                ? symbols.map((v) => CureOneSymbol.from_raw_symbol(self.file!, v))
-                : [];
+            self.symbols = symbols;
         }
     }
 

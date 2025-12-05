@@ -403,8 +403,8 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         this._onDidChangeTreeData.fire(item);
     }
 
-    /** 重新加载数据 */
-    reload() {
+    /** 重新加载数据，会重置现有符号树的折叠、高亮等状态 */
+    private reload() {
         this.items = undefined;
         this.refresh();
     }
@@ -445,6 +445,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     async reload_symbol(doc: vscode.TextDocument) {
         const uri = doc.getText().trim() === "" ? undefined : doc.uri;
         const ok = await this.manager.update_file(uri);
+        // #cure-warn 如果是同一个文件，却会改变现有符号树的折叠呀、高亮等状态
         ok && this.reload();
     }
 
