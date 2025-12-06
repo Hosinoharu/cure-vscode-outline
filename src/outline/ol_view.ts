@@ -15,6 +15,7 @@ import {
     TreeItemType,
 } from "../types/symbol";
 import { set_context_value } from "../common";
+import { wait_follow_cursor_done } from "../settings";
 
 /** 表示符号 tree view 的 item */
 export class CureSymbolTreeItem extends vscode.TreeItem {
@@ -491,8 +492,10 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     async reload_symbol(doc: vscode.TextDocument) {
         const uri = doc.getText().trim() === "" ? undefined : doc.uri;
         if (uri && this.manager.is_same_file(uri)) {
+            CureSymbolTreeItemHandler.Instance.is_editing = true;
             const diffs = await this.manager.get_diff_info();
             diffs ? this.apply_diffs(diffs) : this.reload();
+            CureSymbolTreeItemHandler.Instance.is_editing = false;
         } else {
             const ok = await this.manager.update_file(uri);
             ok && this.reload();
@@ -588,6 +591,13 @@ export class CureSymbolTreeItemHandler {
         this.unhilight();
     }
 
+    /** 在实时编辑时，将其设置为 true，结束编辑时再重置为 false。
+     *
+     * 原因：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，
+     * 必须等实时编辑完成，才能获取到最新的数据、进行比对哟！
+     */
+    public is_editing = false;
+
     //#region 关于 follow viewport
 
     /**
@@ -597,13 +607,11 @@ export class CureSymbolTreeItemHandler {
      * 所以有了这个标记，如果为 `false` 则说明当前很忙，不要触发 `follow viewport`
      */
     public is_follow_viewport_ok = true;
-    /** 点击符号跳转到位置时，会修改滚动条，为了避免触发 `follow viewport`，
-     * 所以给定等待时间才可以继续 `follow viewport`
-     */
+
     private set_follow_viewport_ok() {
         setTimeout(() => {
             this.is_follow_viewport_ok = true;
-        }, 200);
+        }, wait_follow_cursor_done);
     }
 
     //#endregion
@@ -863,6 +871,9 @@ export class CureSymbolTreeItemHandler {
 
     /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */
     public check_update_highlight(items: HighlightItems<CureSymbolTreeItem>) {
+        if (this.is_editing) {
+            return false;
+        }
         const { first, second } = items;
         const { first: last_first, second: last_second } = this.highlighted;
 

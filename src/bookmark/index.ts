@@ -3,6 +3,7 @@ import { CureBookmarkManager } from "./bm_manager";
 import { CureBookmarkTreeProvider } from "./bm_view";
 import { debounce } from "../common";
 import { CureBookmarkTreeViewCMD } from "./bm_cmd";
+import { watch_doc_change_interval } from "../settings";
 
 export const bm_manager = CureBookmarkManager.Instance;
 export const bm_provider = new CureBookmarkTreeProvider(bm_manager);
@@ -19,7 +20,7 @@ async function update_bookmark(doc: vscode.TextDocument) {
     const content = doc.getText();
     await bm_provider.reload_bookmark(uri, content);
 }
-const debounced_update_bookmark = debounce(update_bookmark, 200);
+const debounced_update_bookmark = debounce(update_bookmark, watch_doc_change_interval);
 
 /** 在启动插件时，获取当前打开的文档并初始化 bookmark。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改

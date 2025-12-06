@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { CureOneSymbol } from "../symbol";
 import { OneDiffInfo } from "../types/symbol";
+import { retry_interval, retry_max } from "../settings";
 
 /** 管理一个文件的语法符号。单例模式 */
 export class CureSymbolManager {
@@ -31,16 +32,8 @@ export class CureSymbolManager {
             : [];
     }
 
-    //#region 解析的重试
-
     /** 获取解析符号时，可能为空，因为解析服务还没有完成哟，所以需要重试 */
     private retry_count = 0;
-    /** 最大重试次数 */
-    private readonly retry_max = 5;
-    /** 重试间隔 */
-    private readonly retry_interval = 200;
-
-    //#endregion
 
     //#region 解析文件中原始的符号
 
@@ -118,13 +111,13 @@ export class CureSymbolManager {
             self.file
         );
         // 要么文件没有内容，或者是解析服务还没有完成
-        if (symbols === undefined && self.retry_count < self.retry_max) {
+        if (symbols === undefined && self.retry_count < retry_max) {
             self.retry_count++;
             // 确保解析完成
             return await new Promise<void>((resolve) => {
                 setTimeout(async () => {
                     resolve(await self.update_symbols());
-                }, self.retry_interval);
+                }, retry_interval);
             });
         } else {
             self.symbols = symbols;

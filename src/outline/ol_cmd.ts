@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
 import { debounce } from "../common";
 import { HighlightItems, OutlineSortType, SwitchCmdType } from "../types/symbol";
+import { follow_cursor_interval, follow_viewport_interval } from "../settings";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
 export class CureSymbolTreeViewCMD {
@@ -349,14 +350,17 @@ export class CureSymbolTreeViewCMD {
     private cancel_follow_cursor?: vscode.Disposable;
 
     private register_follow_cursor() {
-        const debounce_follow_cursor = debounce(this.follow_cursor.bind(this), 200);
+        const debounce_follow_cursor = debounce(
+            this.follow_cursor.bind(this),
+            follow_cursor_interval
+        );
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_cursor(editor);
 
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
-                if (this.view.visible) {
+                if (this.view.visible && !this.item_handler.is_editing) {
                     debounce_follow_cursor(e.textEditor);
                 }
             });
@@ -395,7 +399,10 @@ export class CureSymbolTreeViewCMD {
     }
 
     private register_follow_viewport() {
-        const debounce_follow_viewport = debounce(this.follow_viewport.bind(this), 200);
+        const debounce_follow_viewport = debounce(
+            this.follow_viewport.bind(this),
+            follow_viewport_interval
+        );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
             this.update_switch_context("follow-viewport");
             const editor = vscode.window.activeTextEditor;

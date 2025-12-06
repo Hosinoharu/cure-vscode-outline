@@ -3,6 +3,7 @@ import { CureSymbolManager } from "./ol_manager";
 import { CureSymbolTreeProvider } from "./ol_view";
 import { debounce } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
+import { watch_doc_change_interval } from "../settings";
 
 export const ol_manager = CureSymbolManager.Instance;
 export const ol_provider = new CureSymbolTreeProvider(ol_manager);
@@ -19,7 +20,7 @@ async function update_symbol(doc: vscode.TextDocument) {
     console.log("update_symbol_when_doc_change");
     await ol_provider.reload_symbol(doc);
 }
-const debounced_update_symbol = debounce(update_symbol, 300);
+const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
 
 /** 在启动插件时，获取当前打开的文档并初始化 outline。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改
