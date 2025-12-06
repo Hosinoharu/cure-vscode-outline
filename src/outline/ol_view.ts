@@ -59,7 +59,9 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
         // item.description = symbol.detail || symbol.kind + " " + symbol.LineInfo;
-        item.description = symbol.kind;
+        // 显示它有多少个子元素咯
+        item.description =
+            (symbol.Children.length > 0 ? `(${symbol.Children.length}) ` : "") + symbol.kind;
         // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();

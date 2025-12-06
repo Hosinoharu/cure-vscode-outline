@@ -147,7 +147,7 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
     /** 更新分类 item 的描述信息，其实就是展示它的子项数量啦 */
     private update_category_desc() {
         if (this.type === "bookmark_category") {
-            this.description = this.Children.length.toString() || "0";
+            this.description = this.Children.length.toString();
         }
     }
 }

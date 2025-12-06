@@ -221,7 +221,7 @@ export class CureOneSymbol {
     private comment?: string;
     /** 获取该符号所在行、以及上方的注释 */
     public get Comment(): string {
-        if (this.kind === "CureCustomBookmark") {
+        if (this.kind === "CureCustomBookmark" || this.kind === "CureRegion") {
             return this.name;
         }
         if (this.comment !== undefined) {
