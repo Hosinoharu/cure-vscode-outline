@@ -18,15 +18,13 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
     public readonly symbol?: CureOneSymbol;
     /** 当它为 `bookmark item` 时，其所属的 `bookmark category` 名称 */
     public incategory?: BookmarkCategory;
-    /** 这个 id 用于唯一表示该 item 且不变，并不是用于 tree view 中的 id！。
-     *
-     * 通过该 id 可以确定底层对应的符号啦
-     */
+    private readonly unique_id = crypto.randomUUID();
+    /** 这个 id 用于唯一表示该 item 且不变，并不是用于 tree view 中的 id！*/
     public get UniqueId() {
         if (this.type === "bookmark_category") {
             throw new Error("only bookmark item has item id");
         }
-        return this.symbol!.id;
+        return this.unique_id;
     }
 
     private constructor(

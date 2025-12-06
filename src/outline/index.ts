@@ -19,7 +19,7 @@ async function update_symbol(doc: vscode.TextDocument) {
     console.log("update_symbol_when_doc_change");
     await ol_provider.reload_symbol(doc);
 }
-const debounced_update_symbol = debounce(update_symbol, 200);
+const debounced_update_symbol = debounce(update_symbol, 300);
 
 /** 在启动插件时，获取当前打开的文档并初始化 outline。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改
@@ -49,9 +49,9 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     });
 
     // 监听文件修改
-    // vscode.workspace.onDidChangeTextDocument(async (e) => {
-    //     try {
-    //         await debounced_update_symbol(e.document.uri);
-    //     } catch {}
-    // });
+    vscode.workspace.onDidChangeTextDocument(async (e) => {
+        try {
+            await debounced_update_symbol(e.document);
+        } catch {}
+    });
 }

@@ -24,13 +24,8 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     public symbol: CureOneSymbol;
     /** 其对应的 parent item。没有则说明是顶层的 tree item */
     public parent?: CureSymbolTreeItem;
-    /** 这个 id 用于唯一表示该 item 且不变，并不是用于 tree view 中的 id！。
-     *
-     * 通过该 id 可以确定底层对应的符号啦
-     */
-    public get UniqueId() {
-        return this.symbol.id;
-    }
+    /** 这个 id 用于唯一表示该 item 且不变，并不是用于 tree view 中的 id！*/
+    public readonly UniqueId = crypto.randomUUID();
     /** 获取该 tree item 的 tooltips */
     public get Tooltip() {
         return this.symbol.Comment || this.symbol.name;
@@ -40,11 +35,12 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         return this.parent === undefined;
     }
     /** 该 item 的名称 */
-    public readonly name: string;
+    public get name() {
+        return this.symbol.name;
+    }
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
-        this.name = label;
         this.symbol = symbol;
     }
 
@@ -262,10 +258,12 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     /** 应用修改，返回 true 表示将刷新该 item */
     public apply_diff(diff: OneDiffInfo) {
         const new_symbol = diff.new;
+        const last_symbol = this.symbol;
+        this.symbol = new_symbol;
         let refresh = false;
         // 需要更新符号的 ui 哟
         if (diff.refresh) {
-            // console.log("diff:", this.symbol.name, "->", new_symbol.name);
+            // console.log("diff:", last_symbol.name, "->", new_symbol.name);
             refresh = true;
             if (this.is_highlighted) {
                 this.label = { label: new_symbol.name, highlights: [[0, new_symbol.name.length]] };
@@ -273,11 +271,10 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
                 this.label = new_symbol.name;
             }
 
-            if (this.symbol.kind !== new_symbol.kind) {
+            if (last_symbol.kind !== new_symbol.kind) {
                 this.iconPath = new_symbol.Icon;
                 this.description = new_symbol.kind;
             }
-            this.ready_update(); // 标记它会更新
         }
         // 更新子节点
         if (diff.children === undefined) {
@@ -291,9 +288,14 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
                 }
             }
         }
-        this.reset_collapsible_state();
+        // 保持折叠状态，但前提是具备子元素
+        if (this.Children.length === 0) {
+            this.set_collapsible_state();
+        } else if (this.collapsibleState === vscode.TreeItemCollapsibleState.None) {
+            this.set_collapsible_state(true);
+        }
         this.tooltip = undefined;
-        this.symbol = new_symbol;
+        refresh && this.ready_update(); // 标记它会更新
         return refresh;
     }
 }
