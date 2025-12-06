@@ -368,10 +368,13 @@ const configuration = {
             enum: ["position", "kind", "name"],
         },
         "cure-outline.filterType": {
-            type: "string",
-            default: "",
+            type: "array",
+            default: [],
             description: "Filter Type",
-            enum: ["", "no-local-var", "no-global-var"],
+            items: {
+                type: "string",
+                enum: ["no-local-var", "no-global-var"],
+            },
         },
         "cure-outline.followCursor": {
             type: "boolean",

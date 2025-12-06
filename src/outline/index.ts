@@ -18,7 +18,12 @@ async function update_symbol(doc: vscode.TextDocument) {
     if (!ol_view.visible) {
         return;
     }
-    console.log("update_symbol_when_doc_change:", doc.uri.toString());
+    // 以 vscode- 开头的 uri 是 vscode 自带的，不处理
+    const uri = doc.uri.toString();
+    if (uri.startsWith("vscode-")) {
+        return;
+    }
+    console.log("update_symbol_when_doc_change");
     await ol_provider.reload_symbol(doc);
 }
 const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
@@ -30,11 +35,11 @@ const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interva
 export async function ol_init(ctx: vscode.ExtensionContext) {
     ctx.subscriptions.push(ol_view);
     CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
-    start_cmd();
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
         active_doc && (await debounced_update_symbol(active_doc));
+        start_cmd();
     } catch {}
 
     // 监听文档切换

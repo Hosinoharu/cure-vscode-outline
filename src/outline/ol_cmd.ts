@@ -6,7 +6,7 @@
 import * as vscode from "vscode";
 import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider } from "./ol_view";
 import { debounce } from "../common";
-import { HighlightItems, OutlineSortType, SwitchCmdType } from "../types/symbol";
+import { HighlightItems } from "../types/symbol";
 import { follow_cursor_interval, follow_viewport_interval } from "../settings";
 import * as olstorage from "./ol_storage";
 
@@ -42,7 +42,7 @@ export class CureSymbolTreeViewCMD {
         view: vscode.TreeView<CureSymbolTreeItem>
     ) {
         const self = new CureSymbolTreeViewCMD(provider, view);
-        self.init_all_context();
+        olstorage.init_all_context();
         const commands = [
             self.register_reload_symbol(),
 
@@ -98,59 +98,6 @@ export class CureSymbolTreeViewCMD {
 
     // #endregion
 
-    // ==================================
-    //       下面是开关类命令的注册
-    // ==================================
-
-    //#region 开关式命令的上下文管理
-
-    // 开关式命令：具备【开启、关闭】两种状态的命令，比如【全部折叠、全部展开】就是【一对开关命令】
-    // 开关式上下文是为了在菜单中可以显示【已启用、未启用】两种状态
-    // 上下文的命名格式如下：加入 `expand-all` 是开关命令，那么 `expand-off` 就是关闭命令
-    // 那么上下文 `cure-outline-is-expand-all` 就是开关式上下文
-    // 注意：在执行开关类命令的时候，需要【更新上下文】哟
-
-    private init_all_context() {
-        // 默认情况下不展开
-        this.update_switch_context("expand-all-off");
-        this.update_switch_context("expand-only-one-off");
-        this.update_sort_context(olstorage.get_sort_type());
-        olstorage.get_filters().forEach((v) => {
-            this.update_switch_context(`filter-${v}`);
-        });
-    }
-
-    /** 更新开关式命令的上下文，此类上下文命名格式：`cure-outline-is-xxx`
-     * - 比如传入 `expand-all`，这说明上下文 `ure-outline-is-expand-all` 为 `true`
-     * - 比如传入 `expand-all-off`，这说明上下文 `ure-outline-is-expand-all` 为 `false`
-     */
-    private update_switch_context(type: SwitchCmdType) {
-        const index = type.indexOf("-off");
-        const is_on = index < 0;
-        const name = is_on ? type : type.slice(0, index);
-
-        vscode.commands.executeCommand("setContext", `cure-outline-is-${name}`, is_on);
-    }
-
-    /** 更新排序的上下文。 只有在切换排序方式的时候，才需要更新上下文！
-     *
-     * 将另外两个排序的上下文设置为 `false` 就可以不显示那两个了
-     */
-    private update_sort_context(type: OutlineSortType) {
-        // 修改其它排序方式的上下文
-        const sorts: OutlineSortType[] = ["position", "name", "kind"];
-        sorts.forEach((v) => {
-            if (v !== type) {
-                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, false);
-            } else {
-                // 别忘了把自己给设置
-                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, true);
-            }
-        });
-    }
-
-    //#endregion
-
     //#region 注册：折叠与展开全部
 
     private readonly cmd_expand_all = "cure-outline.expand-all";
@@ -158,14 +105,14 @@ export class CureSymbolTreeViewCMD {
 
     private register_expand_all() {
         return vscode.commands.registerCommand(this.cmd_expand_all, () => {
-            this.update_switch_context("expand-all");
+            olstorage.update_switch_context("expand-all");
             this.item_handler.expand_all(true);
         });
     }
 
     private register_expand_all_off() {
         return vscode.commands.registerCommand(this.cmd_expand_all_off, () => {
-            this.update_switch_context("expand-all-off");
+            olstorage.update_switch_context("expand-all-off");
             this.item_handler.expand_all(false);
         });
     }
@@ -203,7 +150,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_sort_by_position() {
         return vscode.commands.registerCommand(this.cmd_sort_by_position, () => {
-            this.update_sort_context("position");
             this.provider.sort_by("position");
         });
     }
@@ -217,7 +163,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_sort_by_name() {
         return vscode.commands.registerCommand(this.cmd_sort_by_name, () => {
-            this.update_sort_context("name");
             this.provider.sort_by("name");
         });
     }
@@ -231,7 +176,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_sort_by_kind() {
         return vscode.commands.registerCommand(this.cmd_sort_by_kind, () => {
-            this.update_sort_context("kind");
             this.provider.sort_by("kind");
         });
     }
@@ -249,17 +193,13 @@ export class CureSymbolTreeViewCMD {
 
     private register_filter_no_local_var() {
         return vscode.commands.registerCommand(this.cmd_filter_no_local_var, () => {
-            this.update_switch_context("filter-no-local-var");
             this.provider.filter_by("no-local-var");
-            olstorage.add_filter("no-local-var");
         });
     }
 
     private register_filter_no_local_var_off() {
         return vscode.commands.registerCommand(this.cmd_filter_no_local_var_off, () => {
-            this.update_switch_context("filter-no-local-var-off");
             this.provider.filter_by("no-local-var");
-            olstorage.remove_filter("no-local-var");
         });
     }
 
@@ -268,17 +208,13 @@ export class CureSymbolTreeViewCMD {
 
     private register_filter_no_global_var() {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var, () => {
-            this.update_switch_context("filter-no-global-var");
             this.provider.filter_by("no-global-var");
-            olstorage.add_filter("no-global-var");
         });
     }
 
     private register_filter_no_global_var_off() {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var_off, () => {
-            this.update_switch_context("filter-no-global-var-off");
             this.provider.filter_by("no-global-var");
-            olstorage.remove_filter("no-global-var");
         });
     }
 
@@ -301,6 +237,9 @@ export class CureSymbolTreeViewCMD {
         _items: CureSymbolTreeItem[],
         range: vscode.Range
     ): HighlightItems<CureSymbolTreeItem> {
+        if (_items.length === 0) {
+            return {};
+        }
         // 需要先对 items 进行复制，然后按位置排序
         // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
         const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
@@ -392,7 +331,6 @@ export class CureSymbolTreeViewCMD {
             follow_cursor_interval
         );
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
-            this.update_switch_context("follow-cursor");
             olstorage.toggle_follow_cursor(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_cursor(editor);
@@ -407,7 +345,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_follow_cursor_off() {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
-            this.update_switch_context("follow-cursor-off");
             olstorage.toggle_follow_cursor(false);
             this.cancel_follow_cursor?.dispose();
             this.item_handler.unhilight();
@@ -447,7 +384,6 @@ export class CureSymbolTreeViewCMD {
             follow_viewport_interval
         );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
-            this.update_switch_context("follow-viewport");
             olstorage.toggle_follow_viewport(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_viewport(editor);
@@ -463,7 +399,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_follow_viewport_off() {
         return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
-            this.update_switch_context("follow-viewport-off");
             olstorage.toggle_follow_viewport(false);
             this.cancel_follow_viewport?.dispose();
             this.item_handler.unhilight();

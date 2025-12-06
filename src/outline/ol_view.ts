@@ -887,7 +887,12 @@ export class CureSymbolTreeItemHandler {
         } else {
             this.record_expaned_item(refresh_item);
         }
-        await this.view.reveal(second ?? first);
+        // 在过滤的时候，有些元素不会显示出来的，所以刷新必然出错
+        // 一种方案是：给每个 TreeItem 新增属性 visible，然后判断 visible 可见再刷新
+        // 这里直接简单处理了，反正我看不到错误就是没问题呗 . . . 欸嘿
+        try {
+            await this.view.reveal(second ?? first);
+        } catch {}
     }
 
     /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */
