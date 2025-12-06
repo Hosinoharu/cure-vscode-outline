@@ -1,3 +1,5 @@
+import { group } from "console";
+
 const get_cmds = (items) => items.map((item) => item.cmd);
 const get_menus = (items) => items.map((item) => item.menu);
 const create_result = (items) => ({ cmd: get_cmds(items), menu: get_menus(items) });
@@ -292,6 +294,31 @@ const view_item_context = (() => {
         menu: {
             command: "cure-outline.add-symbol-to-bookmark",
             when: "view == cure-outline",
+            group: "1_add",
+        },
+    };
+    // 仅折叠、展开一个 item 的所有层级
+    const expand_item_all = {
+        cmd: {
+            command: "cure-outline.expand-item-all",
+            title: "Expand All",
+        },
+        menu: {
+            command: "cure-outline.expand-item-all",
+            when: "view == cure-outline",
+            group: "2_expand@1",
+        },
+    };
+    const expand_item_all_off = {
+        cmd: {
+            command: "cure-outline.expand-item-all-off",
+            title: "Collapse All",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.expand-item-all-off",
+            when: "view == cure-outline",
+            group: "2_expand@2",
         },
     };
     const rename_bookmark = {
@@ -320,7 +347,13 @@ const view_item_context = (() => {
         },
     };
 
-    return create_result([add_symbol_to_bookmark, rename_bookmark, del_bookmark]);
+    return create_result([
+        add_symbol_to_bookmark,
+        expand_item_all,
+        expand_item_all_off,
+        rename_bookmark,
+        del_bookmark,
+    ]);
 })();
 
 // ==========================

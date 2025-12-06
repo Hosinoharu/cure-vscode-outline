@@ -101,6 +101,15 @@
         "title": "Add Bookmark"
       },
       {
+        "command": "cure-outline.expand-item-all",
+        "title": "Expand All"
+      },
+      {
+        "command": "cure-outline.expand-item-all-off",
+        "title": "Collapse All",
+        "icon": "$(check)"
+      },
+      {
         "command": "cure-outline.rename-bookmark",
         "title": "Rename",
         "icon": "$(edit)"
@@ -230,7 +239,18 @@
       "view/item/context": [
         {
           "command": "cure-outline.add-symbol-to-bookmark",
-          "when": "view == cure-outline"
+          "when": "view == cure-outline",
+          "group": "1_add"
+        },
+        {
+          "command": "cure-outline.expand-item-all",
+          "when": "view == cure-outline",
+          "group": "2_expand@1"
+        },
+        {
+          "command": "cure-outline.expand-item-all-off",
+          "when": "view == cure-outline",
+          "group": "2_expand@2"
         },
         {
           "command": "cure-outline.rename-bookmark",

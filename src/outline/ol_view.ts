@@ -922,5 +922,12 @@ export class CureSymbolTreeItemHandler {
         this.provider.refresh();
     }
 
+    /** 折叠与展开一个 item 的所有层级 */
+    public expand_item_all(item: CureSymbolTreeItem, expand: boolean) {
+        this.set_items_expand([item], expand);
+        item.ready_update();
+        this.provider.refresh(item);
+    }
+
     // #endregion
 }
