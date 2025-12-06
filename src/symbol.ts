@@ -352,11 +352,11 @@ export class CureSymbolCMD {
     private register_locate() {
         return vscode.commands.registerCommand(
             this.cmd_locate,
-            async (symbol: CureOneSymbol, callback?: () => Promise<void>) => {
+            async (treeitem: { symbol: CureOneSymbol }, callback?: () => Promise<void>) => {
                 // 打开文档
                 try {
                     await callback?.();
-
+                    const symbol = treeitem.symbol;
                     const editor = await vscode.window.showTextDocument(symbol.uri);
                     // 定位到指定位置，并且高亮所在位置
                     const range = symbol.selection_range;
@@ -376,11 +376,14 @@ export class CureSymbolCMD {
      * 因为现在实现 tree item 点击并居中时，会丢失编辑器中的焦点，聚焦到 tree item 上，
      * 所以需要提前执行，然后定位到编辑器中才行啦！
      */
-    public create_locate(symbol: CureOneSymbol, callback?: () => Promise<void>): vscode.Command {
+    public create_locate(
+        treeitem: { symbol: CureOneSymbol },
+        callback?: () => Promise<void>
+    ): vscode.Command {
         return {
             title: "locate",
             command: this.cmd_locate,
-            arguments: [symbol, callback],
+            arguments: [treeitem, callback],
         };
     }
 

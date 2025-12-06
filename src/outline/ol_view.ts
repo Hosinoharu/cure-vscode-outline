@@ -7,7 +7,13 @@ import * as vscode from "vscode";
 import crypto from "crypto";
 import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureSymbolManager } from "./ol_manager";
-import { HighlightItems, OutlineFilterType, OutlineSortType, TreeItemType } from "../types/symbol";
+import {
+    HighlightItems,
+    OneDiffInfo,
+    OutlineFilterType,
+    OutlineSortType,
+    TreeItemType,
+} from "../types/symbol";
 import { set_context_value } from "../common";
 
 /** 表示符号 tree view 的 item */
@@ -15,7 +21,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     /** 表示该 item 的类型 */
     public readonly type: TreeItemType = "symbol";
     /** 其对应的 symbol 哟 */
-    public readonly symbol: CureOneSymbol;
+    public symbol: CureOneSymbol;
     /** 其对应的 parent item。没有则说明是顶层的 tree item */
     public parent?: CureSymbolTreeItem;
     /** 这个 id 用于唯一表示该 item 且不变，并不是用于 tree view 中的 id！。
@@ -47,14 +53,14 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         const item = new CureSymbolTreeItem(symbol.name, symbol);
         item.once_children = symbol.Children;
         item.iconPath = symbol.Icon;
-        // #cure-warn 实现符号的点击
+        // 实现符号的点击
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
         // 添加 command 后，点击时不再会自动展开了，所以需要手动处理
-        item.command = CureSymbolCMD.Instance.create_locate(symbol, async () => {
+        item.command = CureSymbolCMD.Instance.create_locate(item, async () => {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
-        // item.description = symbol.detail || item.symbol.kind + " " + item.symbol.LineInfo;
-        item.description = item.symbol.kind;
+        // item.description = symbol.detail || symbol.kind + " " + symbol.LineInfo;
+        item.description = symbol.kind;
         // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();
@@ -252,6 +258,29 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
                 return false;
         }
     }
+
+    public apply_diff(diff: OneDiffInfo) {
+        const new_symbol = diff.new;
+        // 需要更新符号的 ui 哟
+        if (diff.refresh) {
+            // console.log("diff:", this.symbol.name, "->", new_symbol.name);
+            if (this.is_highlighted) {
+                this.label = { label: new_symbol.name, highlights: [[0, new_symbol.name.length]] };
+            } else {
+                this.label = new_symbol.name;
+            }
+
+            if (this.symbol.kind !== new_symbol.kind) {
+                this.iconPath = new_symbol.Icon;
+                this.description = new_symbol.kind;
+            }
+
+            // this.reset_collapsible_state();
+            this.ready_update(); // 标记它会更新
+        }
+        this.tooltip = undefined;
+        this.symbol = new_symbol;
+    }
 }
 
 /** 提供符号的 TreeView Provider */
@@ -445,8 +474,8 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     async reload_symbol(doc: vscode.TextDocument) {
         const uri = doc.getText().trim() === "" ? undefined : doc.uri;
         if (uri && this.manager.is_same_file(uri)) {
-            // #cure-warn 如果是同一个文件，却会改变现有符号树的折叠呀、高亮等状态
-            const diff = await this.manager.get_diff_info();
+            const diffs = await this.manager.get_diff_info();
+            diffs ? this.apply_diffs(diffs) : this.reload();
         } else {
             const ok = await this.manager.update_file(uri);
             ok && this.reload();
@@ -454,6 +483,21 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     }
 
     // #endregion 定义事件处理函数
+
+    /** 应用差异、更新视图 */
+    private apply_diffs(diffs: OneDiffInfo[]) {
+        if (diffs.length !== this.Items.length) {
+            throw new Error("diff length is not equal to items length!");
+        }
+        for (let i = 0; i < diffs.length; i++) {
+            const diff = diffs[i];
+            const item = this.Items[i];
+            item.apply_diff(diff);
+            if (diff.refresh) {
+                this.refresh(item);
+            }
+        }
+    }
 }
 
 /** 综合处理一些 Tree View Item 的操作以及给 tree view 添加事件。单例模式 */

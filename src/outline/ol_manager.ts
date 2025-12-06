@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { CureOneSymbol } from "../symbol";
+import { OneDiffInfo } from "../types/symbol";
 
 /** 管理一个文件的语法符号。单例模式 */
 export class CureSymbolManager {
@@ -72,11 +73,30 @@ export class CureSymbolManager {
     }
 
     /** 获取和上次解析符号时的差异信息，用于更新符号树
-     * @requires - 返回 undefined 表示没有差异
+     *
+     * @returns 返回 undefined 表示彻底重新加载整个符号树
      */
-    public async get_diff_info() {
-        console.log("get_diff_info todo");
-        return undefined;
+    public async get_diff_info(): Promise<OneDiffInfo[] | undefined> {
+        const last_symbols = this.symbols;
+        await this.update_symbols();
+        const new_symbols = this.symbols;
+
+        // 顶层符号的个数变化，需要重新刷新整个树
+        if (last_symbols.length !== new_symbols.length) {
+            return undefined;
+        }
+
+        const result: OneDiffInfo[] = [];
+        for (let i = 0; i < last_symbols.length; i++) {
+            const last = last_symbols[i];
+            const new_symbol = new_symbols[i];
+            const changed = this.is_changed(last, new_symbol);
+            result.push({
+                refresh: changed,
+                new: CureOneSymbol.from_raw_symbol(this.file!, new_symbol),
+            });
+        }
+        return result;
     }
 
     /** 更新文档中的符号列表 */
@@ -103,5 +123,12 @@ export class CureSymbolManager {
         }
     }
 
+    /** 比较符号是否发生了变化 */
+    private is_changed(last: vscode.DocumentSymbol, new_symbol: vscode.DocumentSymbol) {
+        if (last.name !== new_symbol.name || last.kind !== new_symbol.kind) {
+            return true;
+        }
+        return false;
+    }
     //#endregion
 }

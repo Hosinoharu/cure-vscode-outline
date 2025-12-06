@@ -56,7 +56,7 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
         item.once_children = [];
         item.iconPath = symbol.Icon;
         // 点击该项时，打开文件、跳转对对应的位置咯
-        item.command = CureSymbolCMD.Instance.create_locate(symbol);
+        item.command = CureSymbolCMD.Instance.create_locate(item as { symbol: CureOneSymbol });
         item.description = symbol.detail;
         item.tooltip = symbol.Comment || symbol.name || symbol.detail;
         set_context_value(item, type);
