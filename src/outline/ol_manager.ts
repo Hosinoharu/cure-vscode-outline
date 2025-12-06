@@ -89,7 +89,10 @@ export class CureSymbolManager {
         for (let i = 0; i < last_symbols.length; i++) {
             const last = last_symbols[i];
             const new_symbol = new_symbols[i];
-            const children = this._get_diff_info(last.children, new_symbol.children);
+            const children = this._get_diff_info(
+                this.sort_by_position(last.children),
+                this.sort_by_position(new_symbol.children)
+            );
             const changed = !children || this.is_changed(last, new_symbol);
             result.push({
                 refresh: changed,
@@ -129,8 +132,12 @@ export class CureSymbolManager {
             });
         } else {
             // 为了保证后续对比时，符号的顺序一致，所以需要按位置排序
-            self.symbols = symbols.sort((a, b) => (a.range.start.isBefore(b.range.start) ? -1 : 1));
+            self.symbols = this.sort_by_position(symbols);
         }
+    }
+
+    private sort_by_position(symbols: vscode.DocumentSymbol[]) {
+        return symbols.sort((a, b) => (a.range.start.isBefore(b.range.start) ? -1 : 1));
     }
 
     //#endregion
