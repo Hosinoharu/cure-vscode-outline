@@ -423,10 +423,15 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         });
     }
 
-    private sort_by_position(items: CureSymbolTreeItem[]) {
+    private sort_by_position(items: CureSymbolTreeItem[], recurse?: boolean) {
         items.sort((a, b) => {
             return a.is_before(b) ? -1 : 1;
         });
+        if (recurse) {
+            for (const item of items) {
+                this.sort_by_position(item.Children, recurse);
+            }
+        }
     }
 
     //#endregion
@@ -511,9 +516,15 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         if (diffs.length !== this.Items.length) {
             throw new Error("diff length is not equal to items length!");
         }
+        // this.Items 可能排序了，需要调整回来
+        const should_sort = this.sort_type !== "position";
+        const items = should_sort ? [...this.Items] : this.Items;
+        if (should_sort) {
+            this.sort_by_position(items, true);
+        }
         for (let i = 0; i < diffs.length; i++) {
             const diff = diffs[i];
-            const item = this.Items[i];
+            const item = items[i];
             if (item.apply_diff(diff)) {
                 this.refresh(item);
             }
