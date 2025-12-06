@@ -80,7 +80,13 @@ export class CureSymbolManager {
         const last_symbols = this.symbols;
         await this.update_symbols();
         const new_symbols = this.symbols;
+        return this._get_diff_info(last_symbols, new_symbols);
+    }
 
+    private _get_diff_info(
+        last_symbols: vscode.DocumentSymbol[],
+        new_symbols: vscode.DocumentSymbol[]
+    ) {
         // 顶层符号的个数变化，需要重新刷新整个树
         if (last_symbols.length !== new_symbols.length) {
             return undefined;
@@ -90,10 +96,12 @@ export class CureSymbolManager {
         for (let i = 0; i < last_symbols.length; i++) {
             const last = last_symbols[i];
             const new_symbol = new_symbols[i];
-            const changed = this.is_changed(last, new_symbol);
+            const children = this._get_diff_info(last.children, new_symbol.children);
+            const changed = !children || this.is_changed(last, new_symbol);
             result.push({
                 refresh: changed,
                 new: CureOneSymbol.from_raw_symbol(this.file!, new_symbol),
+                children: children,
             });
         }
         return result;

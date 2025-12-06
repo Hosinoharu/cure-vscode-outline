@@ -259,11 +259,14 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         }
     }
 
+    /** 应用修改，返回 true 表示将刷新该 item */
     public apply_diff(diff: OneDiffInfo) {
         const new_symbol = diff.new;
+        let refresh = false;
         // 需要更新符号的 ui 哟
         if (diff.refresh) {
             // console.log("diff:", this.symbol.name, "->", new_symbol.name);
+            refresh = true;
             if (this.is_highlighted) {
                 this.label = { label: new_symbol.name, highlights: [[0, new_symbol.name.length]] };
             } else {
@@ -274,12 +277,24 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
                 this.iconPath = new_symbol.Icon;
                 this.description = new_symbol.kind;
             }
-
-            // this.reset_collapsible_state();
             this.ready_update(); // 标记它会更新
         }
+        // 更新子节点
+        if (diff.children === undefined) {
+            this.once_children = new_symbol.Children;
+            this.children = undefined;
+        } else {
+            for (let i = 0; i < diff.children.length; i++) {
+                // 递归处理
+                if (this.Children[i].apply_diff(diff.children[i])) {
+                    refresh = true;
+                }
+            }
+        }
+        this.reset_collapsible_state();
         this.tooltip = undefined;
         this.symbol = new_symbol;
+        return refresh;
     }
 }
 
@@ -492,8 +507,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         for (let i = 0; i < diffs.length; i++) {
             const diff = diffs[i];
             const item = this.Items[i];
-            item.apply_diff(diff);
-            if (diff.refresh) {
+            if (item.apply_diff(diff)) {
                 this.refresh(item);
             }
         }

@@ -84,4 +84,6 @@ type OneDiffInfo = {
     new: CureOneSymbol;
     /** 标记需要刷新 TreeItem 才行 */
     refresh: boolean;
+    /** 为 undefined 直接刷新整个父节点 */
+    children?: OneDiffInfo[];
 };
