@@ -261,7 +261,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
     public apply_diff(diff: OneDiffInfo) {
         const new_symbol = diff.new;
         const last_symbol = this.symbol;
-        this.symbol = new_symbol;
         let refresh = false;
         // 需要更新符号的 ui 哟
         if (diff.refresh) {
@@ -297,6 +296,8 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
             this.set_collapsible_state(true);
         }
         this.tooltip = undefined;
+        // 这个赋值必须调到【操作子节点】的后方，否则 `this.Children` 会访问出错
+        this.symbol = new_symbol;
         refresh && this.ready_update(); // 标记它会更新
         return refresh;
     }

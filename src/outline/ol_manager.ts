@@ -89,10 +89,7 @@ export class CureSymbolManager {
         for (let i = 0; i < last_symbols.length; i++) {
             const last = last_symbols[i];
             const new_symbol = new_symbols[i];
-            const children = this._get_diff_info(
-                this.sort_by_position(last.children),
-                this.sort_by_position(new_symbol.children)
-            );
+            const children = this._get_diff_info(last.children, new_symbol.children);
             const changed = !children || this.is_changed(last, new_symbol);
             result.push({
                 refresh: changed,
@@ -137,7 +134,11 @@ export class CureSymbolManager {
     }
 
     private sort_by_position(symbols: vscode.DocumentSymbol[]) {
-        return symbols.sort((a, b) => (a.range.start.isBefore(b.range.start) ? -1 : 1));
+        symbols.sort((a, b) => (a.range.start.isBefore(b.range.start) ? -1 : 1));
+        for (const symbol of symbols) {
+            symbol.children = this.sort_by_position(symbol.children);
+        }
+        return symbols;
     }
 
     //#endregion
