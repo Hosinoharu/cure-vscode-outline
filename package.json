@@ -1,5 +1,6 @@
 {
   "name": "vscode-cure-outline",
+  "repository": "https://github.com/Hosinoharu/vscode-cure-outline",
   "displayName": "vscode-cure-outline",
   "description": "my vscode outline extension",
   "version": "0.0.1",
