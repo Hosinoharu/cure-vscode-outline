@@ -102,6 +102,7 @@ export class CureBookmarkManager {
         const lines = content.split("\n");
         // 不需要判断是否为注释之类的情况，反正是我自己用
         const result: CureOneSymbol[] = [];
+        const ranges: vscode.Range[] = [];
         for (let i = 0; i < lines.length; i++) {
             const match_result = this.parse_format(lines[i]);
             if (!match_result) {
@@ -113,29 +114,23 @@ export class CureBookmarkManager {
                 : CureOneSymbol.from_region_bookmark(uri, name, i, col);
             result.push(symbol);
 
-            this.add_gutter_icon(i);
+            ranges.push(new vscode.Range(i, 0, i, 1));
         }
+        this.add_gutter_icon(ranges);
         this.category["custom"] = result;
         return true;
     }
 
     /** 记录指定位置的行首 gutter icon  */
-    private decoration_location: Map<number, vscode.TextEditorDecorationType> = new Map();
+    private static readonly decoration = vscode.window.createTextEditorDecorationType({
+        gutterIconPath: bookmark_gutter_icon,
+        gutterIconSize: "contain",
+    });
 
     /** 解析出一个标签后，在它的行首添加一个 icon 标记咯 */
-    private add_gutter_icon(line: number) {
+    private add_gutter_icon(ranges: vscode.Range[]) {
         const editor = vscode.window.activeTextEditor;
-        if (!editor || this.decoration_location.has(line)) {
-            return;
-        }
-
-        const decoration = vscode.window.createTextEditorDecorationType({
-            gutterIconPath: bookmark_gutter_icon,
-            gutterIconSize: "contain",
-        });
-        const range = new vscode.Range(line, 0, line, 0);
-        editor.setDecorations(decoration, [range]);
-        this.decoration_location.set(line, decoration);
+        editor?.setDecorations(CureBookmarkManager.decoration, ranges);
     }
 
     //#endregion
