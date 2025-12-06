@@ -16,6 +16,7 @@ import {
 } from "../types/symbol";
 import { set_context_value } from "../common";
 import { wait_follow_cursor_done } from "../settings";
+import { CureSymbolTreeViewCMD } from "./ol_cmd";
 
 /** 表示符号 tree view 的 item */
 export class CureSymbolTreeItem extends vscode.TreeItem {
@@ -556,6 +557,10 @@ export class CureSymbolTreeItemHandler {
         view.onDidChangeVisibility((e) => {
             // console.log("visibility changed:", e.visible);
             self.visible = e.visible;
+            // 当显示面板的时候，要更新内容哟
+            if (e.visible) {
+                CureSymbolTreeViewCMD.Instance.run_reload_symbol();
+            }
         });
 
         // 可监听以下情况，但无法区分它们：

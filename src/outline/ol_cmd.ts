@@ -88,6 +88,10 @@ export class CureSymbolTreeViewCMD {
         });
     }
 
+    public run_reload_symbol() {
+        vscode.commands.executeCommand(this.cmd_reload_symbol);
+    }
+
     // #endregion
 
     // ==================================

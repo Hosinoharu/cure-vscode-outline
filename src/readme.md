@@ -21,5 +21,5 @@
 
 -   提供一个 `private readonly cmd_xxx` 成员记录命令的名称
 -   提供一个 `private register_xxx` 方法用于注册命令
--   根据需要，提供一个 `public static create_xxx` 方法，用于创建 `Command` 类型
--   根据需要，提供一个 `public static run_xxx` 方法，用于运行命令
+-   根据需要，提供一个 `public create_xxx` 方法，用于创建 `Command` 类型
+-   根据需要，提供一个 `public run_xxx` 方法，用于运行命令
