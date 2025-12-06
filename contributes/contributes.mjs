@@ -356,6 +356,36 @@ const view_item_context = (() => {
     ]);
 })();
 
+// 配置项
+const configuration = {
+    type: "object",
+    title: "Cure Outline",
+    properties: {
+        "cure-outline.sortType": {
+            type: "string",
+            default: "position",
+            description: "Sort type",
+            enum: ["position", "kind", "name"],
+        },
+        "cure-outline.filterType": {
+            type: "string",
+            default: "",
+            description: "Filter Type",
+            enum: ["", "no-local-var", "no-global-var"],
+        },
+        "cure-outline.followCursor": {
+            type: "boolean",
+            default: false,
+            description: "Follow Cursor",
+        },
+        "cure-outline.followViewport": {
+            type: "boolean",
+            default: false,
+            description: "Follow Viewport",
+        },
+    },
+};
+
 // ==========================
 //         整合各命令
 // ==========================
@@ -414,4 +444,5 @@ export default {
             contents: "No Symbol Found In Current File",
         },
     ],
+    configuration,
 };

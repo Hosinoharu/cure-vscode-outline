@@ -8,6 +8,7 @@ import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider }
 import { debounce } from "../common";
 import { HighlightItems, OutlineSortType, SwitchCmdType } from "../types/symbol";
 import { follow_cursor_interval, follow_viewport_interval } from "../settings";
+import * as olstorage from "./ol_storage";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
 export class CureSymbolTreeViewCMD {
@@ -113,8 +114,10 @@ export class CureSymbolTreeViewCMD {
         // 默认情况下不展开
         this.update_switch_context("expand-all-off");
         this.update_switch_context("expand-only-one-off");
-        // 默认排序方式为 position
-        this.update_sort_context("position");
+        this.update_sort_context(olstorage.get_sort_type());
+        olstorage.get_filters().forEach((v) => {
+            this.update_switch_context(`filter-${v}`);
+        });
     }
 
     /** 更新开关式命令的上下文，此类上下文命名格式：`cure-outline-is-xxx`
@@ -247,14 +250,16 @@ export class CureSymbolTreeViewCMD {
     private register_filter_no_local_var() {
         return vscode.commands.registerCommand(this.cmd_filter_no_local_var, () => {
             this.update_switch_context("filter-no-local-var");
-            this.provider.filter_by("no_local_var");
+            this.provider.filter_by("no-local-var");
+            olstorage.add_filter("no-local-var");
         });
     }
 
     private register_filter_no_local_var_off() {
         return vscode.commands.registerCommand(this.cmd_filter_no_local_var_off, () => {
             this.update_switch_context("filter-no-local-var-off");
-            this.provider.filter_by("no_local_var");
+            this.provider.filter_by("no-local-var");
+            olstorage.remove_filter("no-local-var");
         });
     }
 
@@ -264,14 +269,16 @@ export class CureSymbolTreeViewCMD {
     private register_filter_no_global_var() {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var, () => {
             this.update_switch_context("filter-no-global-var");
-            this.provider.filter_by("no_global_var");
+            this.provider.filter_by("no-global-var");
+            olstorage.add_filter("no-global-var");
         });
     }
 
     private register_filter_no_global_var_off() {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var_off, () => {
             this.update_switch_context("filter-no-global-var-off");
-            this.provider.filter_by("no_global_var");
+            this.provider.filter_by("no-global-var");
+            olstorage.remove_filter("no-global-var");
         });
     }
 
@@ -386,6 +393,7 @@ export class CureSymbolTreeViewCMD {
         );
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             this.update_switch_context("follow-cursor");
+            olstorage.toggle_follow_cursor(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_cursor(editor);
 
@@ -400,9 +408,14 @@ export class CureSymbolTreeViewCMD {
     private register_follow_cursor_off() {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
             this.update_switch_context("follow-cursor-off");
+            olstorage.toggle_follow_cursor(false);
             this.cancel_follow_cursor?.dispose();
             this.item_handler.unhilight();
         });
+    }
+
+    public run_follow_cursor() {
+        vscode.commands.executeCommand(this.cmd_follow_cursor);
     }
 
     //#endregion
@@ -435,6 +448,7 @@ export class CureSymbolTreeViewCMD {
         );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
             this.update_switch_context("follow-viewport");
+            olstorage.toggle_follow_viewport(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_viewport(editor);
 
@@ -450,9 +464,14 @@ export class CureSymbolTreeViewCMD {
     private register_follow_viewport_off() {
         return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
             this.update_switch_context("follow-viewport-off");
+            olstorage.toggle_follow_viewport(false);
             this.cancel_follow_viewport?.dispose();
             this.item_handler.unhilight();
         });
+    }
+
+    public run_follow_viewport() {
+        vscode.commands.executeCommand(this.cmd_follow_viewport);
     }
 
     //#endregion

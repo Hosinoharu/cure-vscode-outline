@@ -40,7 +40,7 @@ type OutlineSortType = "name" | "position" | "kind";
  * - `no_local_var`：过滤掉局部变量
  * - `no_global_var`：过滤掉全局变量
  */
-type OutlineFilterType = "no_local_var" | "no_global_var";
+type OutlineFilterType = "no-local-var" | "no-global-var";
 
 //#region 开关类命令
 
@@ -55,7 +55,7 @@ type SortCmdType = `sort-by-${OutlineSortType}` | `sort-by-${OutlineSortType}-of
  *  - `filter-no-local-var`：过滤掉局部变量
  *  - `filter-no-global-var`：过滤掉全局变量
  */
-type FilterType = "filter-no-local-var" | "filter-no-global-var";
+type FilterType = `filter-${OutlineFilterType}`;
 type FilterCmdType = FilterType | `${FilterType}-off`;
 
 /** 响应编辑器的操作 */

@@ -17,6 +17,7 @@ import {
 import { set_context_value } from "../common";
 import { wait_follow_cursor_done } from "../settings";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
+import * as olstorage from "./ol_storage";
 
 /** 表示符号 tree view 的 item */
 export class CureSymbolTreeItem extends vscode.TreeItem {
@@ -248,9 +249,9 @@ export class CureSymbolTreeItem extends vscode.TreeItem {
         const is_var = kind === "Variable" || kind === "Constant";
 
         switch (type) {
-            case "no_local_var":
+            case "no-local-var":
                 return !is_global && is_var;
-            case "no_global_var":
+            case "no-global-var":
                 return is_global && is_var;
             default:
                 return false;
@@ -310,9 +311,9 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 管理符号 */
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
-    private sort_type: OutlineSortType = "position";
+    private sort_type: OutlineSortType = olstorage.get_sort_type();
     /** 表示 item 的过滤类型 */
-    private filter_types: OutlineFilterType[] = [];
+    private filter_types: OutlineFilterType[] = olstorage.get_filters();
     /** 相当于一个缓存，它总是保存全部的符号。某些情况下需要重新获取符号树时，应该将其设置为 undefined */
     private items?: CureSymbolTreeItem[];
     /** 语法符号树信息 */
@@ -467,6 +468,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     sort_by(type: OutlineSortType) {
         if (this.sort_type !== type) {
             this.sort_type = type;
+            olstorage.set_sort_type(type);
             this.refresh();
         }
     }
@@ -479,12 +481,14 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         if (!this.filter_types.includes(type)) {
             this.filter_types.push(type);
             ok = true;
+            olstorage.add_filter(type);
         }
         // 取消过滤
         else {
             const old = this.filter_types.length;
             this.filter_types = this.filter_types.filter((v) => v !== type);
             ok = old !== this.filter_types.length;
+            olstorage.remove_filter(type);
         }
 
         if (ok) {

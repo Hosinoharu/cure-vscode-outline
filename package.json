@@ -269,7 +269,43 @@
         "view": "cure-outline",
         "contents": "No Symbol Found In Current File"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Cure Outline",
+      "properties": {
+        "cure-outline.sortType": {
+          "type": "string",
+          "default": "position",
+          "description": "Sort type",
+          "enum": [
+            "position",
+            "kind",
+            "name"
+          ]
+        },
+        "cure-outline.filterType": {
+          "type": "string",
+          "default": "",
+          "description": "Filter Type",
+          "enum": [
+            "",
+            "no-local-var",
+            "no-global-var"
+          ]
+        },
+        "cure-outline.followCursor": {
+          "type": "boolean",
+          "default": false,
+          "description": "Follow Cursor"
+        },
+        "cure-outline.followViewport": {
+          "type": "boolean",
+          "default": false,
+          "description": "Follow Viewport"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

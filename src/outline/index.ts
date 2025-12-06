@@ -4,6 +4,7 @@ import { CureSymbolTreeProvider } from "./ol_view";
 import { debounce } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
+import * as olstorage from "./ol_storage";
 
 export const ol_manager = CureSymbolManager.Instance;
 export const ol_provider = new CureSymbolTreeProvider(ol_manager);
@@ -17,7 +18,7 @@ async function update_symbol(doc: vscode.TextDocument) {
     if (!ol_view.visible) {
         return;
     }
-    console.log("update_symbol_when_doc_change");
+    console.log("update_symbol_when_doc_change:", doc.uri.toString());
     await ol_provider.reload_symbol(doc);
 }
 const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
@@ -29,6 +30,7 @@ const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interva
 export async function ol_init(ctx: vscode.ExtensionContext) {
     ctx.subscriptions.push(ol_view);
     CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
+    start_cmd();
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
@@ -55,4 +57,14 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
             await debounced_update_symbol(e.document);
         } catch {}
     });
+}
+
+/** 根据开启了哪些配置项，启用对应的功能咯 */
+function start_cmd() {
+    if (olstorage.get_follow_cursor()) {
+        CureSymbolTreeViewCMD.Instance.run_follow_cursor();
+    }
+    if (olstorage.get_follow_viewport()) {
+        CureSymbolTreeViewCMD.Instance.run_follow_viewport();
+    }
 }
