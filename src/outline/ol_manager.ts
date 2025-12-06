@@ -100,6 +100,14 @@ export class CureSymbolManager {
         return result;
     }
 
+    /** 比较符号是否发生了变化 */
+    private is_changed(last: vscode.DocumentSymbol, new_symbol: vscode.DocumentSymbol) {
+        if (last.name !== new_symbol.name || last.kind !== new_symbol.kind) {
+            return true;
+        }
+        return false;
+    }
+
     /** 更新文档中的符号列表 */
     private async update_symbols() {
         const self = this;
@@ -120,16 +128,10 @@ export class CureSymbolManager {
                 }, retry_interval);
             });
         } else {
-            self.symbols = symbols;
+            // 为了保证后续对比时，符号的顺序一致，所以需要按位置排序
+            self.symbols = symbols.sort((a, b) => (a.range.start.isBefore(b.range.start) ? -1 : 1));
         }
     }
 
-    /** 比较符号是否发生了变化 */
-    private is_changed(last: vscode.DocumentSymbol, new_symbol: vscode.DocumentSymbol) {
-        if (last.name !== new_symbol.name || last.kind !== new_symbol.kind) {
-            return true;
-        }
-        return false;
-    }
     //#endregion
 }
