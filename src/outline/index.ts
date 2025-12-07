@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { CureSymbolManager } from "./ol_manager";
 import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
-import { debounce } from "../common";
+import { debounce, is_target_doc } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
 
@@ -41,13 +41,13 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     try {
         // 初次打开时，看作是切换文档
         active_doc &&
-            is_target_doc(active_doc) &&
+            should_handle(active_doc) &&
             (await debounced_update_symbol(active_doc, "switch"));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
-        if (!e || !is_target_doc(e.document)) {
+        if (!e || !should_handle(e.document)) {
             return;
         }
         try {
@@ -62,7 +62,7 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     // 监听文件保存
     vscode.workspace.onDidSaveTextDocument(async (e) => {
-        if (!is_target_doc(e)) {
+        if (!should_handle(e)) {
             return;
         }
         try {
@@ -72,7 +72,7 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     // 监听文件修改
     vscode.workspace.onDidChangeTextDocument(async (e) => {
-        if (!is_target_doc(e.document)) {
+        if (!should_handle(e.document)) {
             return;
         }
         try {
@@ -84,15 +84,6 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 }
 
 /** 判断当前文档是否需要处理 */
-function is_target_doc(doc: vscode.TextDocument) {
-    if (!ol_view.visible) {
-        return false;
-    }
-    // 以 vscode- 开头的 uri 是 vscode 自带的，不处理
-    const uri = doc.uri.toString();
-    if (uri.startsWith("vscode-")) {
-        return false;
-    }
-
-    return true;
+function should_handle(doc: vscode.TextDocument) {
+    return ol_view.visible && is_target_doc(doc);
 }

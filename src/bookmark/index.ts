@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { CureBookmarkManager } from "./bm_manager";
 import { CureBookmarkTreeProvider } from "./bm_view";
-import { debounce } from "../common";
+import { debounce, is_target_doc } from "../common";
 import { CureBookmarkTreeViewCMD } from "./bm_cmd";
 import { watch_doc_change_interval } from "../settings";
 
@@ -11,11 +11,8 @@ export const bm_view = vscode.window.createTreeView(CureBookmarkTreeProvider.id,
     treeDataProvider: bm_provider,
 });
 
-async function update_bookmark(doc: vscode.TextDocument) {
-    if (!bm_view.visible) {
-        return;
-    }
-    console.log("update_bookmark_when_doc_change");
+async function update_bookmark(doc: vscode.TextDocument, type: "switch" | "save") {
+    // console.log("update bookmark when doc:", type);
     const uri = doc.uri;
     const content = doc.getText();
     await bm_provider.reload_bookmark(uri, content);
@@ -32,20 +29,33 @@ export async function bm_init(ctx: vscode.ExtensionContext) {
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
-        active_doc && (await debounced_update_bookmark(active_doc));
+        active_doc &&
+            should_handle(active_doc) &&
+            (await debounced_update_bookmark(active_doc, "switch"));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
+        if (!e || !should_handle(e.document)) {
+            return;
+        }
         try {
-            e && (await debounced_update_bookmark(e.document));
+            await debounced_update_bookmark(e.document, "switch");
         } catch {}
     });
 
     // 监听文件保存
     vscode.workspace.onDidSaveTextDocument(async (e) => {
+        if (!should_handle(e)) {
+            return;
+        }
         try {
-            await debounced_update_bookmark(e);
+            await debounced_update_bookmark(e, "save");
         } catch {}
     });
+}
+
+/** 判断当前文档是否需要处理 */
+function should_handle(doc: vscode.TextDocument) {
+    return bm_view.visible && is_target_doc(doc);
 }
