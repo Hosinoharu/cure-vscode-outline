@@ -1003,6 +1003,42 @@ export class CureSymbolTreeItemHandler {
         return !(first?.is_before(range) && second?.is_after(range));
     }
 
+    /** 在确定鼠标位置后，如果它不在高亮元素上，就需要需要查找其最近的元素。现在加入优化：
+     * - 假设当前有高亮元素，那么下一次可能是进入该高亮元素内部或者父节点内部，所以：
+     * - 如果当前鼠标位置在**当前高亮元素内部**，那么直接返回该其子元素
+     * - 如果鼠标位置在**高亮元素的父元素内部**，那么直接返回对应父元素的子元素
+     * - 否则，就只能从根节点开始查找了
+     */
+    public get_search_items(range: vscode.Range) {
+        const { first, second } = this.highlighted;
+        if (first) {
+            const target = this.find_parent_has_range(first, range);
+            if (target) {
+                console.log("search items in:", target.name);
+                return target.Children;
+            }
+        }
+        if (second) {
+            const target = this.find_parent_has_range(second, range);
+            if (target) {
+                console.log("search items in:", target.name);
+                return target.Children;
+            }
+        }
+        return this.provider.Items;
+    }
+
+    /** 从 item 向上查找，直到找到某一个父元素正好包含该范围 */
+    private find_parent_has_range(item: CureSymbolTreeItem, range: vscode.Range) {
+        let parent: CureSymbolTreeItem | undefined = item;
+        while (parent) {
+            if (parent.is_contains(range, false)) {
+                return parent;
+            }
+            parent = parent.parent;
+        }
+    }
+
     //#endregion
 
     //#region 折叠与展开全部

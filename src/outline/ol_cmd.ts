@@ -302,7 +302,8 @@ export class CureSymbolTreeViewCMD {
         const col = position.character;
         const range = new vscode.Range(line, col, line, col);
         if (this.item_handler.is_highlight_range_changed(range)) {
-            const closer_item = this.get_closer_item(this.provider.Items, range);
+            const search_items = this.item_handler.get_search_items(range);
+            const closer_item = this.get_closer_item(search_items, range);
             this.highlight_items(closer_item, "follow_cursor");
         }
     }
@@ -401,7 +402,8 @@ export class CureSymbolTreeViewCMD {
         const center_line = Math.floor((top_line + bottom_line) / 2);
         const range = new vscode.Range(center_line, 0, center_line, 0);
         if (this.item_handler.is_highlight_range_changed(range)) {
-            const closer_item = this.get_closer_item(this.provider.Items, range);
+            const search_items = this.item_handler.get_search_items(range);
+            const closer_item = this.get_closer_item(search_items, range);
             this.highlight_items(closer_item, "follow_viewport");
         }
     }
