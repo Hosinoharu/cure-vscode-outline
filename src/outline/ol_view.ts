@@ -15,7 +15,7 @@ import {
     TreeItemType,
 } from "../types/symbol";
 import { set_context_value } from "../common";
-import { wait_follow_cursor_done } from "../settings";
+import { wait_for_follow_feature } from "../settings";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import * as olstorage from "./ol_storage";
 
@@ -501,17 +501,54 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
     }
 
-    /** 加载一个文档的符号！ */
-    async reload_symbol(doc: vscode.TextDocument) {
+    /** 加载一个文档的符号！
+     * @param doc 目标文档
+     * @param type 操作的类型，它表示出于怎样的目的才调用本方法，从而在加载符号前，对内部的状态进行调整
+     * - reload: 重新加载文档
+     * - switch: 切换文档
+     * - save: 保存文档
+     * - edit: 编辑文档
+     */
+    public async reload_symbol(
+        doc: vscode.TextDocument,
+        type: "reload" | "switch" | "save" | "edit"
+    ) {
+        const ol_item_handler = CureSymbolTreeItemHandler.Instance;
+        // 加载符号前的状态调整
+        switch (type) {
+            case "switch":
+                // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
+                ol_item_handler.disable_follow_cursor();
+                ol_item_handler.disable_follow_viewport();
+                ol_item_handler.reset_state();
+                break;
+            case "edit":
+                // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
+                ol_item_handler.disable_follow_cursor();
+            case "save":
+            case "reload":
+                break;
+        }
+
+        // ================== 更新符号的主要逻辑 ========================
         const uri = doc.getText().trim() === "" ? undefined : doc.uri;
         if (uri && this.manager.is_same_file(uri)) {
-            CureSymbolTreeItemHandler.Instance.is_editing = true;
             const diffs = await this.manager.get_diff_info();
             diffs ? this.apply_diffs(diffs) : this.reload();
-            CureSymbolTreeItemHandler.Instance.is_editing = false;
         } else {
             const ok = await this.manager.update_file(uri);
             ok && this.reload();
+        }
+        // ==============================================================
+
+        // 符号加载完成之后，在这里恢复之前的状态
+        ol_item_handler.enable_follow_cursor(true);
+        ol_item_handler.enable_follow_viewport(true);
+        if (type !== "reload") {
+            // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
+            // 先触发 follow cursor，如果失败再触发 follow viewport
+            const cmder = CureSymbolTreeViewCMD.Instance;
+            !cmder.start_follow_cursor() && cmder.start_follow_viewport();
         }
     }
 
@@ -608,33 +645,73 @@ export class CureSymbolTreeItemHandler {
 
     /** 重置内部一些状态 */
     public reset_state() {
+        this.is_follow_cursor_ok = true;
         this.is_follow_viewport_ok = true;
         this.last_expand_top_items = [];
         this.expaned_items.clear();
         this.unhilight();
     }
 
-    /** 在实时编辑时，将其设置为 true，结束编辑时再重置为 false。
-     *
-     * 原因：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，
-     * 必须等实时编辑完成，才能获取到最新的数据、进行比对哟！
-     */
-    public is_editing = false;
+    //#region 关于 follow viewport 与 follow cursor
 
-    //#region 关于 follow viewport
-
+    private is_follow_viewport_ok = true;
     /**
      * 当开启 `follow viewport` 时，
      * 【点击符号跳转到位置】、【follow cursor] 等都会触发 `follow viewport`。
      *
-     * 所以有了这个标记，如果为 `false` 则说明当前很忙，不要触发 `follow viewport`
+     * 所以有了这个标记，如果为 `false` 则说明当前很忙，不要触发 `follow viewport`。
+     *
+     * 还有切换文档的时候，也会触发 `follow viewport`，所以需要暂时取消啦。
      */
-    public is_follow_viewport_ok = true;
+    public get CanFollowViewport() {
+        return this.is_follow_viewport_ok;
+    }
 
-    private set_follow_viewport_ok() {
-        setTimeout(() => {
+    /** 临时取消 follow viewport，等待部分工作完成 */
+    public disable_follow_viewport() {
+        this.is_follow_viewport_ok = false;
+    }
+
+    /** 恢复临时取消的 follow viewport
+     *
+     * @param [imediate=false] 为 true 则立即恢复，否则等待一段时间
+     */
+    public enable_follow_viewport(imediate = false) {
+        if (imediate) {
             this.is_follow_viewport_ok = true;
-        }, wait_follow_cursor_done);
+        } else {
+            setTimeout(() => {
+                this.is_follow_viewport_ok = true;
+            }, wait_for_follow_feature);
+        }
+    }
+
+    private is_follow_cursor_ok = true;
+    /** 如果为 false 说明当前很忙，不会触发 follow cursor。
+     *
+     * 比如：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，
+     * 必须等实时编辑完成，才能获取到最新的数据、进行比对哟！
+     */
+    public get CanFollowCursor() {
+        return this.is_follow_cursor_ok;
+    }
+
+    /** 临时取消 follow cursor，等待部分工作完成 */
+    public disable_follow_cursor() {
+        this.is_follow_cursor_ok = false;
+    }
+
+    /** 恢复临时取消的 follow cursor
+     * @param [imediate=false] 为 true 则立即恢复，否则等待一段时间
+     */
+    public enable_follow_cursor(imediate = false) {
+        if (imediate) {
+            this.is_follow_cursor_ok = true;
+        } else {
+            setTimeout(() => {
+                this.is_follow_cursor_ok = true;
+            }, wait_for_follow_feature);
+        }
     }
 
     //#endregion
@@ -777,8 +854,7 @@ export class CureSymbolTreeItemHandler {
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
     public async expand_only_one(item: CureSymbolTreeItem) {
-        this.is_follow_viewport_ok = false;
-
+        this.disable_follow_viewport();
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
         } else {
@@ -786,7 +862,7 @@ export class CureSymbolTreeItemHandler {
         }
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
-        this.set_follow_viewport_ok();
+        this.enable_follow_viewport();
     }
 
     //#endregion
@@ -833,15 +909,20 @@ export class CureSymbolTreeItemHandler {
         last_second && this._unhighlight(last_second, first, second);
     }
 
-    /** 取消所有高亮 */
-    public async unhilight() {
+    /** 取消所有高亮。
+     * @param [clean=false] 为 true 则仅仅是清空缓存的高亮的 item，而不是取消高亮。
+     * 因为在涉及到**刷新整个 TreeView 时**，只需要清空这个缓存即可，不再需要取消高亮。
+     */
+    public unhilight(clean = false) {
         const { first, second } = this.highlighted;
-        first?.highlighten(false);
-        second?.highlighten(false);
         this.highlighted.first = undefined;
         this.highlighted.second = undefined;
-        this.provider.refresh(first);
-        this.provider.refresh(second);
+        if (!clean) {
+            first?.highlighten(false);
+            second?.highlighten(false);
+            this.provider.refresh(first);
+            this.provider.refresh(second);
+        }
     }
 
     /** 在 follow cursor 时，高亮 item，折叠其它的 item！
@@ -899,7 +980,7 @@ export class CureSymbolTreeItemHandler {
 
     /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */
     public check_update_highlight(items: HighlightItems<CureSymbolTreeItem>) {
-        if (this.is_editing) {
+        if (!this.CanFollowCursor) {
             return false;
         }
         const { first, second } = items;

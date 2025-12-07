@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { CureSymbolManager } from "./ol_manager";
-import { CureSymbolTreeProvider } from "./ol_view";
+import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
 import { debounce } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
@@ -14,7 +14,7 @@ export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
     // showCollapseAll: true,
 });
 
-async function update_symbol(doc: vscode.TextDocument) {
+async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
     if (!ol_view.visible) {
         return;
     }
@@ -23,8 +23,8 @@ async function update_symbol(doc: vscode.TextDocument) {
     if (uri.startsWith("vscode-")) {
         return;
     }
-    console.log("update_symbol_when_doc_change");
-    await ol_provider.reload_symbol(doc);
+    console.log(`update_symbol_when_doc_${type}`);
+    await ol_provider.reload_symbol(doc, type);
 }
 const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
 
@@ -38,38 +38,28 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
-        active_doc && (await debounced_update_symbol(active_doc));
-        start_cmd();
+        // 初次打开时，看作是切换文档
+        active_doc && (await debounced_update_symbol(active_doc, "switch"));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
         try {
-            e && (await debounced_update_symbol(e.document));
+            e && (await debounced_update_symbol(e.document, "switch"));
         } catch {}
     });
 
     // 监听文件保存
     vscode.workspace.onDidSaveTextDocument(async (e) => {
         try {
-            await debounced_update_symbol(e);
+            await debounced_update_symbol(e, "save");
         } catch {}
     });
 
     // 监听文件修改
     vscode.workspace.onDidChangeTextDocument(async (e) => {
         try {
-            await debounced_update_symbol(e.document);
+            await debounced_update_symbol(e.document, "edit");
         } catch {}
     });
-}
-
-/** 根据开启了哪些配置项，启用对应的功能咯 */
-function start_cmd() {
-    if (olstorage.get_follow_cursor()) {
-        CureSymbolTreeViewCMD.Instance.run_follow_cursor();
-    }
-    if (olstorage.get_follow_viewport()) {
-        CureSymbolTreeViewCMD.Instance.run_follow_viewport();
-    }
 }

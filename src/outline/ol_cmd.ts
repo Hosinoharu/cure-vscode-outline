@@ -87,7 +87,7 @@ export class CureSymbolTreeViewCMD {
             // 获取当前打开的文档 uri
             const doc = vscode.window.activeTextEditor?.document;
             if (doc) {
-                await this.provider.reload_symbol(doc);
+                await this.provider.reload_symbol(doc, "reload");
             }
         });
     }
@@ -336,7 +336,7 @@ export class CureSymbolTreeViewCMD {
             editor && debounce_follow_cursor(editor);
 
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
-                if (this.view.visible && !this.item_handler.is_editing) {
+                if (this.view.visible && this.item_handler.CanFollowCursor) {
                     debounce_follow_cursor(e.textEditor);
                 }
             });
@@ -351,8 +351,15 @@ export class CureSymbolTreeViewCMD {
         });
     }
 
-    public run_follow_cursor() {
+    private run_follow_cursor() {
         vscode.commands.executeCommand(this.cmd_follow_cursor);
+    }
+
+    /** 根据配置项调用一次 follow cursor 功能。返回是否开启了该功能 */
+    public start_follow_cursor() {
+        const open = olstorage.get_follow_cursor();
+        open && this.run_follow_cursor();
+        return open;
     }
 
     //#endregion
@@ -390,7 +397,7 @@ export class CureSymbolTreeViewCMD {
 
             // 监听编辑器滚动，当【点击符号】跳转时，也会触发滚动事件
             this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
-                if (this.view.visible && this.item_handler.is_follow_viewport_ok) {
+                if (this.view.visible && this.item_handler.CanFollowViewport) {
                     debounce_follow_viewport(e.textEditor);
                 }
             });
@@ -405,8 +412,15 @@ export class CureSymbolTreeViewCMD {
         });
     }
 
-    public run_follow_viewport() {
+    private run_follow_viewport() {
         vscode.commands.executeCommand(this.cmd_follow_viewport);
+    }
+
+    /** 根据配置项调用一次 follow viewport 功能 */
+    public start_follow_viewport() {
+        const open = olstorage.get_follow_viewport();
+        open && this.run_follow_viewport();
+        return open;
     }
 
     //#endregion

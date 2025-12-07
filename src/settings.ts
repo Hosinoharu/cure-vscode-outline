@@ -22,5 +22,7 @@ export const follow_cursor_interval = 550;
 export const follow_viewport_interval = 200;
 /** 点击符号跳转到位置时，会修改滚动条，为了避免触发 `follow viewport`，
  * 所以给定等待时间才可以继续 `follow viewport`
+ *
+ * 同理，也要 follow cursor 也要等待文档切换完成之后才能进行
  */
-export const wait_follow_cursor_done = 200;
+export const wait_for_follow_feature = 200;
