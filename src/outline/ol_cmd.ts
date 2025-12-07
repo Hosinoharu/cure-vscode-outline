@@ -155,7 +155,20 @@ export class CureSymbolTreeViewCMD {
     }
 
     private register_sort_by_position_off() {
-        return vscode.commands.registerCommand(this.cmd_sort_by_position_off, () => {});
+        return vscode.commands.registerCommand(this.cmd_sort_by_position_off, () => {
+            // 需要取消 follow viewport 哟
+            if (olstorage.get_follow_viewport()) {
+                this.run_follow_viewport_off();
+                return vscode.window.showInformationMessage(
+                    "Follow Viewport disabled, because sort type is not 'by position'"
+                );
+            }
+        });
+    }
+
+    /** 取消 sort_by_position 时（也就是切换排序方式且不为 position 时）需要执行一些操作 */
+    public run_sort_by_position_off() {
+        vscode.commands.executeCommand(this.cmd_sort_by_position_off);
     }
 
     private readonly cmd_sort_by_name = "cure-outline.sort-by-name";
@@ -401,6 +414,11 @@ export class CureSymbolTreeViewCMD {
             follow_viewport_interval
         );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
+            if (this.provider.Sorttype !== "position") {
+                return vscode.window.showInformationMessage(
+                    "Follow Viewport only works when sort type is 'by position'"
+                );
+            }
             olstorage.toggle_follow_viewport(true);
             this.item_handler.enable_follow_viewport(true);
             const editor = vscode.window.activeTextEditor;
@@ -410,7 +428,11 @@ export class CureSymbolTreeViewCMD {
             }
             // 监听编辑器滚动，当【点击符号】跳转时，也会触发滚动事件
             this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
-                if (this.view.visible && this.item_handler.CanFollowViewport) {
+                if (
+                    this.view.visible &&
+                    this.item_handler.CanFollowViewport &&
+                    this.provider.Sorttype === "position"
+                ) {
                     debounce_follow_viewport(e.textEditor);
                 }
             });
@@ -428,6 +450,10 @@ export class CureSymbolTreeViewCMD {
 
     private run_follow_viewport() {
         vscode.commands.executeCommand(this.cmd_follow_viewport);
+    }
+
+    private run_follow_viewport_off() {
+        vscode.commands.executeCommand(this.cmd_follow_viewport_off);
     }
 
     /** 根据配置项调用一次 follow viewport 功能 */
