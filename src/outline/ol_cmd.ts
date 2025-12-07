@@ -302,7 +302,7 @@ export class CureSymbolTreeViewCMD {
     private highlight_items(closer_item: HighlightItems<CureSymbolTreeItem>, title: string) {
         // 至少有一个，同时需要更新才能继续
         if (!closer_item.first) {
-            return this.item_handler.unhilight();
+            return this.item_handler.unhighlight();
         }
         if (!this.item_handler.check_update_highlight(closer_item)) {
             return;
@@ -316,7 +316,13 @@ export class CureSymbolTreeViewCMD {
         }
         if (second) {
             console.log(title, ":", first.name, "-", second.name);
-            this.item_handler.highlight(first, second);
+            // 只有按位置排序排序时，才需要高亮两个表示位于【两个符号中间】
+            if (this.provider.Sorttype === "position") {
+                this.item_handler.highlight(first, second);
+            } else {
+                this.item_handler.unhighlight();
+                console.log("unhighlight cause sort type is not by position");
+            }
         } else {
             console.log(title, ":", first.name);
             this.item_handler.highlight(first);
@@ -332,9 +338,12 @@ export class CureSymbolTreeViewCMD {
         );
         return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
             olstorage.toggle_follow_cursor(true);
+            this.item_handler.enable_follow_cursor(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_cursor(editor);
-
+            if (this.cancel_follow_cursor) {
+                return;
+            }
             this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) => {
                 if (this.view.visible && this.item_handler.CanFollowCursor) {
                     debounce_follow_cursor(e.textEditor);
@@ -347,7 +356,8 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
             olstorage.toggle_follow_cursor(false);
             this.cancel_follow_cursor?.dispose();
-            this.item_handler.unhilight();
+            this.cancel_follow_cursor = undefined;
+            this.item_handler.unhighlight();
         });
     }
 
@@ -392,9 +402,12 @@ export class CureSymbolTreeViewCMD {
         );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
             olstorage.toggle_follow_viewport(true);
+            this.item_handler.enable_follow_viewport(true);
             const editor = vscode.window.activeTextEditor;
             editor && debounce_follow_viewport(editor);
-
+            if (this.cancel_follow_viewport) {
+                return;
+            }
             // 监听编辑器滚动，当【点击符号】跳转时，也会触发滚动事件
             this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
                 if (this.view.visible && this.item_handler.CanFollowViewport) {
@@ -408,7 +421,8 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
             olstorage.toggle_follow_viewport(false);
             this.cancel_follow_viewport?.dispose();
-            this.item_handler.unhilight();
+            this.cancel_follow_viewport = undefined;
+            this.item_handler.unhighlight();
         });
     }
 

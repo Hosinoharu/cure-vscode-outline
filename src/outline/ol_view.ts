@@ -314,6 +314,10 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
     private sort_type: OutlineSortType = olstorage.get_sort_type();
+    /** 当前的排序方式 */
+    public get Sorttype() {
+        return this.sort_type;
+    }
     /** 表示 item 的过滤类型 */
     private filter_types: OutlineFilterType[] = olstorage.get_filters();
     /** 相当于一个缓存，它总是保存全部的符号。某些情况下需要重新获取符号树时，应该将其设置为 undefined */
@@ -471,6 +475,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         if (this.sort_type !== type) {
             this.sort_type = type;
             olstorage.set_sort_type(type);
+            CureSymbolTreeItemHandler.Instance.unhighlight_when_change_sort();
             this.refresh();
         }
     }
@@ -608,12 +613,12 @@ export class CureSymbolTreeItemHandler {
     public reset_state() {
         this.last_expand_top_items = [];
         this.expaned_items.clear();
-        this.unhilight();
+        this.unhighlight();
     }
 
     //#region 关于 follow viewport 与 follow cursor
 
-    private is_follow_viewport_ok = true;
+    private is_follow_viewport_ok = false;
     /**
      * 当开启 `follow viewport` 时，
      * 【点击符号跳转到位置】、【follow cursor] 等都会触发 `follow viewport`。
@@ -645,7 +650,7 @@ export class CureSymbolTreeItemHandler {
         }
     }
 
-    private is_follow_cursor_ok = true;
+    private is_follow_cursor_ok = false;
     /** 如果为 false 说明当前很忙，不会触发 follow cursor。
      *
      * 比如：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，
@@ -872,15 +877,32 @@ export class CureSymbolTreeItemHandler {
      * @param [clean=false] 为 true 则仅仅是清空缓存的高亮的 item，而不是取消高亮。
      * 因为在涉及到**刷新整个 TreeView 时**，只需要清空这个缓存即可，不再需要取消高亮。
      */
-    public unhilight(clean = false) {
+    public unhighlight(clean = false) {
         const { first, second } = this.highlighted;
         this.highlighted.first = undefined;
         this.highlighted.second = undefined;
         if (!clean) {
             first?.highlighten(false);
             second?.highlighten(false);
-            this.provider.refresh(first);
-            this.provider.refresh(second);
+            first && this.provider.refresh(first);
+            second && this.provider.refresh(second);
+        }
+    }
+
+    /** 当修改排序方式时，这样做：
+     * - 排序方式不是 position，如果当前高亮了两个，需要全部取消，否则什么都不做咯。
+     * - 排序方式是 position 时，触发一次 `follow` 操作
+     * 因为高亮两个表示**位于这两个符号中间**，改变排序方式后，高亮两个元素是多余的了。
+     */
+    public unhighlight_when_change_sort() {
+        const { first, second } = this.highlighted;
+        if (this.provider.Sorttype !== "position") {
+            if (first && second) {
+                this.unhighlight();
+            }
+        } else {
+            !CureSymbolTreeViewCMD.Instance.start_follow_cursor() &&
+                CureSymbolTreeViewCMD.Instance.start_follow_cursor();
         }
     }
 

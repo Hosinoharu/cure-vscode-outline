@@ -14,10 +14,7 @@ export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
 });
 
 async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
-    if (!is_target_doc(doc)) {
-        return;
-    }
-    console.log("update symbol when doc:", type);
+    console.log("update symbol when doc:", type, ". url:", doc.uri.toString().slice(0, 10));
     await ol_provider.reload_symbol(doc);
 
     // ==============================================================
@@ -43,11 +40,16 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
         // 初次打开时，看作是切换文档
-        active_doc && (await debounced_update_symbol(active_doc, "switch"));
+        active_doc &&
+            is_target_doc(active_doc) &&
+            (await debounced_update_symbol(active_doc, "switch"));
     } catch {}
 
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
+        if (!e || !is_target_doc(e.document)) {
+            return;
+        }
         try {
             // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
             const ol_item_handler = CureSymbolTreeItemHandler.Instance;
@@ -60,6 +62,9 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     // 监听文件保存
     vscode.workspace.onDidSaveTextDocument(async (e) => {
+        if (!is_target_doc(e)) {
+            return;
+        }
         try {
             await debounced_update_symbol(e, "save");
         } catch {}
@@ -67,6 +72,9 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     // 监听文件修改
     vscode.workspace.onDidChangeTextDocument(async (e) => {
+        if (!is_target_doc(e.document)) {
+            return;
+        }
         try {
             // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
             CureSymbolTreeItemHandler.Instance.disable_follow_cursor();
