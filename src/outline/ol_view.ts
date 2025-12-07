@@ -622,7 +622,7 @@ export class CureSymbolTreeItemHandler {
 
     //#region 关于 follow viewport 与 follow cursor
 
-    private is_follow_viewport_ok = false;
+    private is_follow_viewport_ok = true;
     /**
      * 当开启 `follow viewport` 时，
      * 【点击符号跳转到位置】、【follow cursor] 等都会触发 `follow viewport`。
@@ -654,7 +654,7 @@ export class CureSymbolTreeItemHandler {
         }
     }
 
-    private is_follow_cursor_ok = false;
+    private is_follow_cursor_ok = true;
     /** 如果为 false 说明当前很忙，不会触发 follow cursor。
      *
      * 比如：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，

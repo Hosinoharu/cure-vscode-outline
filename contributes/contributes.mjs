@@ -117,30 +117,6 @@ const expand = (() => {
             group: "navigation@2",
         },
     };
-    // const expand_only_one = {
-    //     cmd: {
-    //         command: "cure-outline.expand-only-one",
-    //         title: "Expand Only One",
-    //     },
-    //     menu: {
-    //         command: "cure-outline.expand-only-one",
-    //         when: "view == cure-outline && !cure-outline-is-expand-only-one",
-    //         group: "expand@1",
-    //     },
-    // };
-    // const expand_only_one_off = {
-    //     cmd: {
-    //         command: "cure-outline.expand-only-one-off",
-    //         title: "✔ Expand Only One",
-    //         // 不知道为什么不能在菜单前面加图标
-    //         icon: "$(check)",
-    //     },
-    //     menu: {
-    //         command: "cure-outline.expand-only-one-off",
-    //         when: "view == cure-outline && cure-outline-is-expand-only-one",
-    //         group: "expand@1",
-    //     },
-    // };
 
     return create_result([expand_all, expand_all_off]);
 })();

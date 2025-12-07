@@ -155,20 +155,18 @@ export class CureSymbolTreeViewCMD {
     }
 
     private register_sort_by_position_off() {
-        return vscode.commands.registerCommand(this.cmd_sort_by_position_off, () => {
-            // 需要取消 follow viewport 哟
-            if (olstorage.get_follow_viewport()) {
-                this.run_follow_viewport_off();
-                return vscode.window.showInformationMessage(
-                    "Follow Viewport disabled, because sort type is not 'by position'"
-                );
-            }
-        });
+        return vscode.commands.registerCommand(this.cmd_sort_by_position_off, () => {});
     }
 
     /** 取消 sort_by_position 时（也就是切换排序方式且不为 position 时）需要执行一些操作 */
     public run_sort_by_position_off() {
-        vscode.commands.executeCommand(this.cmd_sort_by_position_off);
+        // 需要取消 follow viewport 哟
+        if (olstorage.get_follow_viewport()) {
+            this.run_follow_viewport_off();
+            return vscode.window.showInformationMessage(
+                "Follow Viewport disabled, because sort type is not 'by position'"
+            );
+        }
     }
 
     private readonly cmd_sort_by_name = "cure-outline.sort-by-name";

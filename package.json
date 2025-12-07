@@ -2,6 +2,7 @@
   "name": "vscode-cure-outline",
   "repository": "https://github.com/Hosinoharu/vscode-cure-outline",
   "publisher": "hosinoharu",
+  "license": "MIT",
   "icon": "icons/icon-256.png",
   "displayName": "vscode-cure-outline",
   "description": "my vscode outline extension",
