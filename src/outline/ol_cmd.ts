@@ -300,11 +300,11 @@ export class CureSymbolTreeViewCMD {
         const position = editor.selection.active;
         const line = position.line;
         const col = position.character;
-        const closer_item = this.get_closer_item(
-            this.provider.Items,
-            new vscode.Range(line, col, line, col)
-        );
-        this.highlight_items(closer_item, "follow_cursor");
+        const range = new vscode.Range(line, col, line, col);
+        if (this.item_handler.is_highlight_range_changed(range)) {
+            const closer_item = this.get_closer_item(this.provider.Items, range);
+            this.highlight_items(closer_item, "follow_cursor");
+        }
     }
 
     /** 提取出来的方法，因为 `follow cursor、follow viewport` 都会用到
@@ -399,11 +399,11 @@ export class CureSymbolTreeViewCMD {
         const top_line = ranges[0].start.line;
         const bottom_line = ranges[0].end.line;
         const center_line = Math.floor((top_line + bottom_line) / 2);
-        const closer_item = this.get_closer_item(
-            this.provider.Items,
-            new vscode.Range(center_line, 0, center_line, 0)
-        );
-        this.highlight_items(closer_item, "follow_viewport");
+        const range = new vscode.Range(center_line, 0, center_line, 0);
+        if (this.item_handler.is_highlight_range_changed(range)) {
+            const closer_item = this.get_closer_item(this.provider.Items, range);
+            this.highlight_items(closer_item, "follow_viewport");
+        }
     }
 
     private register_follow_viewport() {

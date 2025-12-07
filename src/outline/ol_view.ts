@@ -989,6 +989,20 @@ export class CureSymbolTreeItemHandler {
         return changed;
     }
 
+    /** 在高亮元素时，如果当前的位置就在上一次的高亮元素范围内，那么就可以取消本次计算了 */
+    public is_highlight_range_changed(range: vscode.Range) {
+        const { first, second } = this.highlighted;
+        if (!first && !second) {
+            return true;
+        }
+        // 只有一个高亮，看看是否在它的范围内
+        if (!second) {
+            return !first?.is_contains(range, true);
+        }
+        // 两个高亮，看看是否在它们之间
+        return !(first?.is_before(range) && second?.is_after(range));
+    }
+
     //#endregion
 
     //#region 折叠与展开全部
