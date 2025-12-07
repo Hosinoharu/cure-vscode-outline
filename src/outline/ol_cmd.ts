@@ -262,7 +262,11 @@ export class CureSymbolTreeViewCMD {
 
         // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
         if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
-            return {};
+            // 现在调整了查询范围，找子元素了
+            // 如当前高亮 A、B，然后进入到 B 对象中，从里面找子项，结果没找到
+            // 这就说明它位于【父元素中】，应该高亮该父元素
+            // 如果是顶层元素，则正好 parent 为 undefined 哟，刚刚好！！
+            return { first: up_closer_item.parent };
         }
 
         for (const item of items) {
