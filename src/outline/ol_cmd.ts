@@ -87,7 +87,7 @@ export class CureSymbolTreeViewCMD {
             // 获取当前打开的文档 uri
             const doc = vscode.window.activeTextEditor?.document;
             if (doc) {
-                await this.provider.reload_symbol(doc, "reload");
+                await this.provider.reload_symbol(doc);
             }
         });
     }

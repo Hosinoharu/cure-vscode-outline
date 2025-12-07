@@ -4,7 +4,6 @@ import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
 import { debounce } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
-import * as olstorage from "./ol_storage";
 
 export const ol_manager = CureSymbolManager.Instance;
 export const ol_provider = new CureSymbolTreeProvider(ol_manager);
@@ -15,16 +14,21 @@ export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
 });
 
 async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
-    if (!ol_view.visible) {
+    if (!is_target_doc(doc)) {
         return;
     }
-    // 以 vscode- 开头的 uri 是 vscode 自带的，不处理
-    const uri = doc.uri.toString();
-    if (uri.startsWith("vscode-")) {
-        return;
-    }
-    console.log(`update_symbol_when_doc_${type}`);
-    await ol_provider.reload_symbol(doc, type);
+    console.log("update symbol when doc:", type);
+    await ol_provider.reload_symbol(doc);
+
+    // ==============================================================
+    // 符号加载完成之后，在这里恢复之前的状态
+    const ol_item_handler = CureSymbolTreeItemHandler.Instance;
+    ol_item_handler.enable_follow_cursor(true);
+    ol_item_handler.enable_follow_viewport(true);
+    // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
+    // 先触发 follow cursor，如果失败再触发 follow viewport
+    const cmder = CureSymbolTreeViewCMD.Instance;
+    !cmder.start_follow_cursor() && cmder.start_follow_viewport();
 }
 const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
 
@@ -45,6 +49,11 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     // 监听文档切换
     vscode.window.onDidChangeActiveTextEditor(async (e) => {
         try {
+            // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
+            const ol_item_handler = CureSymbolTreeItemHandler.Instance;
+            ol_item_handler.disable_follow_cursor();
+            ol_item_handler.disable_follow_viewport();
+            ol_item_handler.reset_state();
             e && (await debounced_update_symbol(e.document, "switch"));
         } catch {}
     });
@@ -59,7 +68,23 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     // 监听文件修改
     vscode.workspace.onDidChangeTextDocument(async (e) => {
         try {
+            // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
+            CureSymbolTreeItemHandler.Instance.disable_follow_cursor();
             await debounced_update_symbol(e.document, "edit");
         } catch {}
     });
+}
+
+/** 判断当前文档是否需要处理 */
+function is_target_doc(doc: vscode.TextDocument) {
+    if (!ol_view.visible) {
+        return false;
+    }
+    // 以 vscode- 开头的 uri 是 vscode 自带的，不处理
+    const uri = doc.uri.toString();
+    if (uri.startsWith("vscode-")) {
+        return false;
+    }
+
+    return true;
 }

@@ -501,36 +501,8 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
     }
 
-    /** 加载一个文档的符号！
-     * @param doc 目标文档
-     * @param type 操作的类型，它表示出于怎样的目的才调用本方法，从而在加载符号前，对内部的状态进行调整
-     * - reload: 重新加载文档
-     * - switch: 切换文档
-     * - save: 保存文档
-     * - edit: 编辑文档
-     */
-    public async reload_symbol(
-        doc: vscode.TextDocument,
-        type: "reload" | "switch" | "save" | "edit"
-    ) {
-        const ol_item_handler = CureSymbolTreeItemHandler.Instance;
-        // 加载符号前的状态调整
-        switch (type) {
-            case "switch":
-                // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
-                ol_item_handler.disable_follow_cursor();
-                ol_item_handler.disable_follow_viewport();
-                ol_item_handler.reset_state();
-                break;
-            case "edit":
-                // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
-                ol_item_handler.disable_follow_cursor();
-            case "save":
-            case "reload":
-                break;
-        }
-
-        // ================== 更新符号的主要逻辑 ========================
+    /** 加载一个文档的符号 */
+    public async reload_symbol(doc: vscode.TextDocument) {
         const uri = doc.getText().trim() === "" ? undefined : doc.uri;
         if (uri && this.manager.is_same_file(uri)) {
             const diffs = await this.manager.get_diff_info();
@@ -538,17 +510,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         } else {
             const ok = await this.manager.update_file(uri);
             ok && this.reload();
-        }
-        // ==============================================================
-
-        // 符号加载完成之后，在这里恢复之前的状态
-        ol_item_handler.enable_follow_cursor(true);
-        ol_item_handler.enable_follow_viewport(true);
-        if (type !== "reload") {
-            // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
-            // 先触发 follow cursor，如果失败再触发 follow viewport
-            const cmder = CureSymbolTreeViewCMD.Instance;
-            !cmder.start_follow_cursor() && cmder.start_follow_viewport();
         }
     }
 
@@ -645,8 +606,6 @@ export class CureSymbolTreeItemHandler {
 
     /** 重置内部一些状态 */
     public reset_state() {
-        this.is_follow_cursor_ok = true;
-        this.is_follow_viewport_ok = true;
         this.last_expand_top_items = [];
         this.expaned_items.clear();
         this.unhilight();
