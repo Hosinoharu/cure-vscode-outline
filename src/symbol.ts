@@ -111,17 +111,20 @@ export class CureOneSymbol {
     static from_region_bookmark(
         uri: vscode.Uri,
         name: string,
-        line: number,
-        col: number
+        range: vscode.Range,
+        selection_range: vscode.Range,
+        children: CureOneSymbol[]
     ): CureOneSymbol {
-        return new CureOneSymbol(
+        const c = new CureOneSymbol(
             uri,
             name,
             "CureRegion",
-            CureOneSymbol.create_line_info(line, col),
-            new vscode.Range(line, col, line, col),
-            new vscode.Range(line, col, line, col)
+            CureOneSymbol.create_line_info(range.start.line, range.start.character),
+            range,
+            selection_range
         );
+        c.Children = children;
+        return c;
     }
 
     public get Children(): CureOneSymbol[] {
@@ -130,6 +133,10 @@ export class CureOneSymbol {
             this._children = [];
         }
         return this.children;
+    }
+
+    public set Children(children: CureOneSymbol[]) {
+        this.children = children;
     }
 
     /** 获取所在行、列信息，如 (Ln 1, Col 1) */
