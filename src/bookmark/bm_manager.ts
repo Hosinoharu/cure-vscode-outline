@@ -146,7 +146,8 @@ class OneRegionSymbol {
      * @param col 符号所在的列
      */
     constructor(public name: string, private line: number, private col: number) {
-        this.range = new vscode.Range(this.line, 0, this.line, this.col);
+        // 7 是 #region 的长度
+        this.range = new vscode.Range(line, col, line, col + 7);
     }
 
     /** 给定 region 的结尾，创建一个用于 outline 展示的符号 */
@@ -214,11 +215,9 @@ class CureRegionManager {
         this.uri = uri;
     }
 
-    /** 获取解析结果
-     * @returns matched: 记录完全对上的 region 符号，它们将被添加到 outline 中
-     *          unmatch: 记录没有匹配到 endregion 的 region 符号，它们将添加到 bookmark 中
-     */
+    /** 获取解析结果 */
     get_result() {
+        // 按位置排序
         this.for_bookmark.sort((a, b) => a.range.start.line - b.range.start.line);
         // 标记未匹配的 region
         for (const r of this.region_stack) {
@@ -237,7 +236,6 @@ class CureRegionManager {
     /** 解析一行
      * @param line  要解析的行
      * @param ln      行号
-     * @returns 返回一个解析出的 region 符号
      */
     public parse_one_line(line: string, ln: number) {
         const match_result = this.parse_line(line);
@@ -260,9 +258,7 @@ class CureRegionManager {
             } else {
                 this.for_outline.push(s);
             }
-
-            const r = start.create_region_symbol_bm(this.uri);
-            this.for_bookmark.push(r);
+            this.for_bookmark.push(start.create_region_symbol_bm(this.uri));
         }
     }
 
