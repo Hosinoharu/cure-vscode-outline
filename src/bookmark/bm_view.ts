@@ -209,7 +209,7 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
     }
 
     /** 重新加载数据 */
-    private reload() {
+    reload() {
         this.items = undefined;
         this.refresh();
     }
