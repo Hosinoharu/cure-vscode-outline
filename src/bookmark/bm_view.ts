@@ -143,7 +143,7 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
     // #endregion children
 
     /** 更新分类 item 的描述信息，其实就是展示它的子项数量啦 */
-    private update_category_desc() {
+    public update_category_desc() {
         if (this.type === "bookmark_category") {
             this.description = this.Children.length.toString();
         }
@@ -223,6 +223,7 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
             CureBookmarkTreeItem.create_item(v, "custom", "bookmark_custom")
         );
         this.bookmark_categories.custom.Children = r;
+        this.bookmark_categories.custom.update_category_desc();
         this.refresh(this.bookmark_categories.custom);
     }
 
