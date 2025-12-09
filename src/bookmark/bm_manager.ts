@@ -95,18 +95,20 @@ export class CureBookmarkManager {
             return undefined;
         }
 
-        // 不需要判断是否为注释之类的情况，反正是我自己用
+        // 暂时不需要判断每一行是否为注释之类的情况，因为自定义书签的格式是特殊的
+        /** 记录解析的自定义注释 */
         const symbols: CureOneSymbol[] = [];
+        /** 记录哪些行具备自定义注释 */
         const ranges: vscode.Range[] = [];
-        const region_handler = CureRegionParser.Instance;
-        region_handler.reset(uri);
+        const region_parser = CureRegionParser.Instance;
+        region_parser.reset(uri);
 
         for (let i = 0; i < doc.lineCount; i++) {
             const line = doc.lineAt(i);
             if (line.isEmptyOrWhitespace) {
                 continue;
             }
-            region_handler.parse_one_line(line.text, i);
+            region_parser.parse_one_line(line.text, i);
             const match_result = this.parse_format(line.text);
             if (!match_result) {
                 continue;
@@ -114,13 +116,13 @@ export class CureBookmarkManager {
             const { name, col } = match_result;
             const s = CureOneSymbol.from_custom_bookmark(uri, name, i, col);
             symbols.push(s);
-            ranges.push(s.range);
+            ranges.push(line.range);
         }
 
         this.add_gutter_icon(ranges);
         this.category["custom"] = symbols;
 
-        const { for_outline, for_bookmark } = region_handler.get_result();
+        const { for_outline, for_bookmark } = region_parser.get_result();
         for_bookmark.forEach((r) => symbols.push(r));
         return for_outline;
     }

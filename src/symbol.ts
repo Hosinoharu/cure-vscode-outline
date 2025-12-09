@@ -242,11 +242,9 @@ export class CureOneSymbol {
         if (this.comment !== undefined) {
             return this.comment;
         }
-        // #cure-warn 这里有问题，居然访问当前文档！但是好像也不应该访问其它文件
-        // 此处仅仅是开发过程中的调试
         const curr_doc = vscode.window.activeTextEditor?.document;
         if (curr_doc === undefined || curr_doc.uri.toString() !== this.uri.toString()) {
-            return "";
+            return "[Current document is not the same as the symbol's document]";
         }
 
         const start_line = this.range.start.line;
