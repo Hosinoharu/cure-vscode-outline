@@ -628,6 +628,7 @@ export class CureSymbolTreeItemHandler {
     //#region 关于 follow viewport 与 follow cursor
 
     private is_follow_viewport_ok = true;
+    private fv_tid: number | undefined;
     /**
      * 当开启 `follow viewport` 时，
      * 【点击符号跳转到位置】、【follow cursor] 等都会触发 `follow viewport`。
@@ -643,6 +644,7 @@ export class CureSymbolTreeItemHandler {
     /** 临时取消 follow viewport，等待部分工作完成 */
     public disable_follow_viewport() {
         this.is_follow_viewport_ok = false;
+        clearTimeout(this.fv_tid);
     }
 
     /** 恢复临时取消的 follow viewport
@@ -653,13 +655,14 @@ export class CureSymbolTreeItemHandler {
         if (imediate) {
             this.is_follow_viewport_ok = true;
         } else {
-            setTimeout(() => {
+            this.fv_tid = setTimeout(() => {
                 this.is_follow_viewport_ok = true;
-            }, wait_for_follow_feature);
+            }, wait_for_follow_feature) as any;
         }
     }
 
     private is_follow_cursor_ok = true;
+    private fc_tid: number | undefined;
     /** 如果为 false 说明当前很忙，不会触发 follow cursor。
      *
      * 比如：在编辑时不能高亮鼠标当前所在的符号，因为在【比对符号位置】时，用到的还是之前的数据，
@@ -672,6 +675,7 @@ export class CureSymbolTreeItemHandler {
     /** 临时取消 follow cursor，等待部分工作完成 */
     public disable_follow_cursor() {
         this.is_follow_cursor_ok = false;
+        clearTimeout(this.fc_tid);
     }
 
     /** 恢复临时取消的 follow cursor
@@ -681,9 +685,9 @@ export class CureSymbolTreeItemHandler {
         if (imediate) {
             this.is_follow_cursor_ok = true;
         } else {
-            setTimeout(() => {
+            this.fc_tid = setTimeout(() => {
                 this.is_follow_cursor_ok = true;
-            }, wait_for_follow_feature);
+            }, wait_for_follow_feature) as any;
         }
     }
 
