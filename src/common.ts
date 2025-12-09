@@ -63,7 +63,7 @@ export function set_context_value(item: vscode.TreeItem, type: TreeItemType) {
 export function is_target_doc(doc: vscode.TextDocument) {
     // 以 vscode- 开头的 uri 是 vscode 自带的，不处理
     const uri = doc.uri.toString();
-    if (uri.startsWith("vscode-")) {
+    if (uri.startsWith("vscode-") || uri.startsWith("git:")) {
         return false;
     }
 
