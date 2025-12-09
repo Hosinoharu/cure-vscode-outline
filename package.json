@@ -14,137 +14,135 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "cure-outline.reload-symbol",
         "title": "Reload Current File Symbol",
-        "icon": "$(refresh)",
-        "enablement": "false"
+        "icon": "$(refresh)"
       },
       {
         "command": "cure-outline.reload-bookmark",
         "title": "Reload Current File Bookmark",
-        "icon": "$(refresh)",
-        "enablement": "false"
+        "icon": "$(refresh)"
       },
       {
         "command": "cure-outline.follow-cursor",
         "title": "Follow Cursor",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.follow-cursor-off",
         "title": "✔ Follow Cursor",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.follow-viewport",
         "title": "Follow Viewport",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.follow-viewport-off",
         "title": "✔ Follow Viewport",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.expand-all",
         "title": "Expand All",
         "icon": "$(expand-all)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.expand-all-off",
         "title": "Collapse All",
         "icon": "$(collapse-all)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-position",
         "title": "Sort By Position",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-position-off",
         "title": "✔ Sort By Position",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-name",
         "title": "Sort By Name",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-name-off",
         "title": "✔ Sort By Name",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-kind",
         "title": "Sort By Kind",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.sort-by-kind-off",
         "title": "✔ Sort By Kind",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.filter-no-local-var",
         "title": "No Local Var",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.filter-no-local-var-off",
         "title": "✔ No Local Var",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.filter-no-global-var",
         "title": "No Global Var",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.filter-no-global-var-off",
         "title": "✔ No Global Var",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.add-symbol-to-bookmark",
         "title": "Add Bookmark",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.expand-item-all",
         "title": "Expand All",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.expand-item-all-off",
         "title": "Collapse All",
         "icon": "$(check)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.rename-bookmark",
         "title": "Rename",
         "icon": "$(edit)",
-        "enablement": "false"
+        "category": "Cure Outline"
       },
       {
         "command": "cure-outline.del-bookmark",
         "title": "Delete",
         "icon": "$(close)",
-        "enablement": "false"
+        "category": "Cure Outline"
       }
     ],
     "viewsContainers": {
@@ -171,6 +169,100 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "cure-outline.reload-symbol",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.reload-bookmark",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.follow-cursor",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.follow-cursor-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.follow-viewport",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.follow-viewport-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.expand-all",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.expand-all-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-position",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-position-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-name",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-name-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-kind",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.sort-by-kind-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.filter-no-local-var",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.filter-no-local-var-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.filter-no-global-var",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.filter-no-global-var-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.add-symbol-to-bookmark",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.expand-item-all",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.expand-item-all-off",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.rename-bookmark",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.del-bookmark",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "cure-outline.reload-symbol",

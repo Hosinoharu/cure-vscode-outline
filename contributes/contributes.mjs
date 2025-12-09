@@ -1,9 +1,8 @@
+const command_palette = [];
 const get_cmds = (items) =>
     items.map((item) => {
-        // 批量给命令添加该属性，让其不会在命令面板上显示
-        if (!item.cmd.enablement) {
-            item.cmd.enablement = "false";
-        }
+        item.cmd.category = "Cure Outline";
+        command_palette.push({ command: item.cmd.command, when: "false" });
         return item.cmd;
     });
 const get_menus = (items) => items.map((item) => item.menu);
@@ -11,40 +10,32 @@ const create_result = (items) => ({ cmd: get_cmds(items), menu: get_menus(items)
 
 // 重新加载符号
 const reload_symbol = {
-    cmd: [
-        {
-            command: "cure-outline.reload-symbol",
-            title: "Reload Current File Symbol",
-            icon: "$(refresh)",
-            enablement: "false",
-        },
-    ],
-    menu: [
-        {
-            command: "cure-outline.reload-symbol",
-            when: "view == cure-outline",
-            group: "navigation@1",
-        },
-    ],
+    cmd: {
+        command: "cure-outline.reload-symbol",
+        title: "Reload Current File Symbol",
+        icon: "$(refresh)",
+    },
+    menu: {
+        command: "cure-outline.reload-symbol",
+        when: "view == cure-outline",
+        group: "navigation@1",
+    },
 };
+command_palette.push({ command: reload_symbol.cmd.command, when: "false" });
 // 重新加载自定义书签
 const reload_bookmark = {
-    cmd: [
-        {
-            command: "cure-outline.reload-bookmark",
-            title: "Reload Current File Bookmark",
-            icon: "$(refresh)",
-            enablement: "false",
-        },
-    ],
-    menu: [
-        {
-            command: "cure-outline.reload-bookmark",
-            when: "view == cure-outline-bookmark",
-            group: "navigation@1",
-        },
-    ],
+    cmd: {
+        command: "cure-outline.reload-bookmark",
+        title: "Reload Current File Bookmark",
+        icon: "$(refresh)",
+    },
+    menu: {
+        command: "cure-outline.reload-bookmark",
+        when: "view == cure-outline-bookmark",
+        group: "navigation@1",
+    },
 };
+command_palette.push({ command: reload_bookmark.cmd.command, when: "false" });
 
 const follow = (() => {
     const follow_cursor = {
@@ -377,8 +368,8 @@ const configuration = {
 // ==========================
 
 const commands = [
-    ...reload_symbol.cmd,
-    ...reload_bookmark.cmd,
+    reload_symbol.cmd,
+    reload_bookmark.cmd,
     ...follow.cmd,
     ...expand.cmd,
     ...sort.cmd,
@@ -387,9 +378,10 @@ const commands = [
 ];
 
 const menus = {
+    commandPalette: command_palette,
     "view/title": [
-        ...reload_symbol.menu,
-        ...reload_bookmark.menu,
+        reload_symbol.menu,
+        reload_bookmark.menu,
         ...follow.menu,
         ...expand.menu,
         ...sort.menu,
