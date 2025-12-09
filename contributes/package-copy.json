@@ -17,13 +17,15 @@
   "main": "./out/extension.js",
   "contributes": {},
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run gen-package && npm run package",
+    "package": "webpack --mode production --devtool hidden-source-map",
     "compile": "npm run gen && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
-    "gen": "node ./contributes/gen.mjs"
+    "gen": "node ./contributes/gen.mjs",
+    "gen-package": "node ./contributes/gen.mjs --package"
   },
   "devDependencies": {
     "@types/vscode": "^1.106.1",
@@ -33,6 +35,9 @@
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "ts-loader": "^9.5.4",
+    "webpack": "^5.103.0",
+    "webpack-cli": "^6.0.1"
   }
 }

@@ -1,6 +1,8 @@
 这里定义了插件所需要的 `contributes` 配置。
 
-**通过执行命令 `npm run gen` 生成 `package.json` 文件中的 `contributes` 配置项**。
+**通过执行命令 `npm run gen` 生成 `package.json` 文件中的 `contributes` 配置项**。会将 `package.json` 中的 `main` 字段指向 `out/extension.js`，说明这是测试阶段开发
+
+`npm run gen-package` 命令作用相同，但会将 `main` 字段指向 `dist/extension.js`，说明这是打包
 
 `package-copy.json` 是原始 `package.json` 的备份且具备空的 `contributes` 字段 ，防止生成过程中出问题。
 

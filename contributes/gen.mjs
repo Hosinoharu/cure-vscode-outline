@@ -7,6 +7,10 @@ import fs from "fs";
 import path from "path";
 import contributes from "./contributes.mjs";
 
+const args = process.argv;
+const package_mode = args.includes("--package");
+const main_file = (package_mode ? "./dist" : "./out") + "/extension.js";
+
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const package_file = path.resolve(dirname, "../package.json");
 const backup = path.resolve(dirname, "./package-copy.json");
@@ -22,6 +26,7 @@ const content = fs.readFileSync(package_file, "utf-8");
 save_copy(content);
 
 const json_content = JSON.parse(content);
+json_content["main"] = main_file;
 json_content["contributes"] = contributes;
 
 const output = JSON.stringify(json_content, null, 2);
