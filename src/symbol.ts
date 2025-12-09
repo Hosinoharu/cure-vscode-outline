@@ -153,25 +153,28 @@ export class CureOneSymbol {
             return this.icon;
         }
 
+        let iconId = "";
+
         // 处理自定义的 symbol kind
         if (this.kind === "CureRegion") {
-            return new vscode.ThemeIcon("list-unordered");
+            iconId = "list-unordered";
         } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
-            return new vscode.ThemeIcon("bookmark");
+            iconId = "bookmark";
+        } else {
+            /** 根据观察，如果 kind 中只有一个大写，则直接转为小写即可。比如 `Function` 变为 `function`
+             *
+             * 否则，需要在原本大写的前面加上 - 符号。比如 `TypeParameter` 变为 `type-parameter`
+             */
+            const str = this.kind
+                // 第一个 ([A-Z][a-z]*) 表示匹配大写字母开头的单词
+                // 然后在它前面插入一个符号 -，所以最后输出的时候，需要去掉第一个符号嘛
+                .replace(/([A-Z][a-z]*)+?/g, "-$1")
+                .slice(1)
+                .toLowerCase();
+            iconId = `symbol-${str}`;
         }
 
-        /** 根据观察，如果 kind 中只有一个大写，则直接转为小写即可。比如 `Function` 变为 `function`
-         *
-         * 否则，需要在原本大写的前面加上 - 符号。比如 `TypeParameter` 变为 `type-parameter`
-         */
-        const str = this.kind
-            // 第一个 ([A-Z][a-z]*) 表示匹配大写字母开头的单词
-            // 然后在它前面插入一个符号 -，所以最后输出的时候，需要去掉第一个符号嘛
-            .replace(/([A-Z][a-z]*)+?/g, "-$1")
-            .slice(1)
-            .toLowerCase();
-
-        this.icon = new vscode.ThemeIcon(`symbol-${str}`, this.Color);
+        this.icon = new vscode.ThemeIcon(iconId, this.Color);
         return this.icon;
     }
 
@@ -185,16 +188,20 @@ export class CureOneSymbol {
             return this.color;
         }
 
+        let colorId = "";
+
         // 处理自定义的 symbol kind
         if (this.kind === "CureRegion") {
-            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
+            colorId = "symbolIcon.namespaceForeground";
         } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
-            return new vscode.ThemeColor("symbolIcon.namespaceForeground");
+            colorId = "symbolIcon.namespaceForeground";
+        } else {
+            /** 根据观察，将 kind 的第一个单词转为小写 + Foreground 即可。比如 `Function` 变为 `functionForeground`*/
+            const str = this.kind[0].toLowerCase() + this.kind.slice(1) + "Foreground";
+            colorId = `symbolIcon-${str}`;
         }
 
-        /** 根据观察，将 kind 的第一个单词转为小写 + Foreground 即可。比如 `Function` 变为 `functionForeground`*/
-        const str = this.kind[0].toLowerCase() + this.kind.slice(1) + "Foreground";
-        this.color = new vscode.ThemeColor(`symbolIcon-${str}`);
+        this.color = new vscode.ThemeColor(colorId);
         return this.color;
     }
 
