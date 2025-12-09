@@ -1,6 +1,11 @@
-import { group } from "console";
-
-const get_cmds = (items) => items.map((item) => item.cmd);
+const get_cmds = (items) =>
+    items.map((item) => {
+        // 批量给命令添加该属性，让其不会在命令面板上显示
+        if (!item.cmd.enablement) {
+            item.cmd.enablement = "false";
+        }
+        return item.cmd;
+    });
 const get_menus = (items) => items.map((item) => item.menu);
 const create_result = (items) => ({ cmd: get_cmds(items), menu: get_menus(items) });
 
@@ -11,6 +16,7 @@ const reload_symbol = {
             command: "cure-outline.reload-symbol",
             title: "Reload Current File Symbol",
             icon: "$(refresh)",
+            enablement: "false",
         },
     ],
     menu: [
@@ -28,6 +34,7 @@ const reload_bookmark = {
             command: "cure-outline.reload-bookmark",
             title: "Reload Current File Bookmark",
             icon: "$(refresh)",
+            enablement: "false",
         },
     ],
     menu: [

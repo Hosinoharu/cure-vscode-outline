@@ -20,108 +20,131 @@
       {
         "command": "cure-outline.reload-symbol",
         "title": "Reload Current File Symbol",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.reload-bookmark",
         "title": "Reload Current File Bookmark",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.follow-cursor",
-        "title": "Follow Cursor"
+        "title": "Follow Cursor",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.follow-cursor-off",
         "title": "✔ Follow Cursor",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.follow-viewport",
-        "title": "Follow Viewport"
+        "title": "Follow Viewport",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.follow-viewport-off",
         "title": "✔ Follow Viewport",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.expand-all",
         "title": "Expand All",
-        "icon": "$(expand-all)"
+        "icon": "$(expand-all)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.expand-all-off",
         "title": "Collapse All",
-        "icon": "$(collapse-all)"
+        "icon": "$(collapse-all)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-position",
-        "title": "Sort By Position"
+        "title": "Sort By Position",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-position-off",
         "title": "✔ Sort By Position",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-name",
-        "title": "Sort By Name"
+        "title": "Sort By Name",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-name-off",
         "title": "✔ Sort By Name",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-kind",
-        "title": "Sort By Kind"
+        "title": "Sort By Kind",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.sort-by-kind-off",
         "title": "✔ Sort By Kind",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.filter-no-local-var",
-        "title": "No Local Var"
+        "title": "No Local Var",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.filter-no-local-var-off",
         "title": "✔ No Local Var",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.filter-no-global-var",
-        "title": "No Global Var"
+        "title": "No Global Var",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.filter-no-global-var-off",
         "title": "✔ No Global Var",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.add-symbol-to-bookmark",
-        "title": "Add Bookmark"
+        "title": "Add Bookmark",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.expand-item-all",
-        "title": "Expand All"
+        "title": "Expand All",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.expand-item-all-off",
         "title": "Collapse All",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.rename-bookmark",
         "title": "Rename",
-        "icon": "$(edit)"
+        "icon": "$(edit)",
+        "enablement": "false"
       },
       {
         "command": "cure-outline.del-bookmark",
         "title": "Delete",
-        "icon": "$(close)"
+        "icon": "$(close)",
+        "enablement": "false"
       }
     ],
     "viewsContainers": {
