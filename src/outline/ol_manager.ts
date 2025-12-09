@@ -60,7 +60,7 @@ export class CureSymbolManager {
         try {
             await this.update_symbols();
             this.regions = await bm_manager.update_file(doc);
-            bm_reload_for_ol();
+            await bm_reload_for_ol();
         } catch (e: any) {
             vscode.window.showWarningMessage(`get file symbols error: ${e.message}`);
             ok = false;
@@ -78,7 +78,7 @@ export class CureSymbolManager {
         await this.update_symbols();
         const new_symbols = this.symbols;
         this.regions = await bm_manager.update_file(doc);
-        bm_reload_for_ol();
+        await bm_reload_for_ol();
         return this._get_diff_info(last_symbols, new_symbols);
     }
 

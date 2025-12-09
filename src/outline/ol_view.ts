@@ -122,7 +122,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
         // 有 children 还设置为 None？？可能是过滤的情况
         if (state === vscode.TreeItemCollapsibleState.None && this.Children.length !== 0) {
-            const is_filter = this._filter_children && this._filter_children.length !== 0;
+            const is_filter = this.filted_children && this.filted_children.length !== 0;
             // 有过滤后的 children，肯定不会设置为 None
             if (is_filter) {
                 return false;
@@ -189,6 +189,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     /** 获取 Item 的子项 */
     get Children(): CureSymbolTreeItem[] {
+        console.log("get children:", this.name);
         if (this.children === undefined) {
             const parent = this;
             this.children = this.once_children.map((v) => {
@@ -226,13 +227,13 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     /** 妥协的设计。临时存储一份过滤后的子节点便于后续展示。
      * 在重置过滤条件时，应该也重置本属性
      */
-    public _filter_children?: CureSymbolTreeItem[];
+    public filted_children?: CureSymbolTreeItem[];
     /** 重置属性，同时重置其折叠状态！ */
-    public reset_filter_children() {
-        this._filter_children = undefined;
+    public reset_filted_children() {
+        this.filted_children = undefined;
         this.reset_collapsible_state();
         for (const child of this.Children) {
-            child.reset_filter_children();
+            child.reset_filted_children();
         }
     }
 
@@ -328,10 +329,10 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     getTreeItem(element: CureSymbolTreeItem): vscode.TreeItem {
         if (this.filter_types.length > 0) {
-            element._filter_children = this.apply_filter(element.Children);
+            element.filted_children = this.apply_filter(element.Children);
             // 子元素没有了，需要重新设置父元素的折叠状态
-            // 必须在这里修改状态，所以才有了 _filter_children 这个妥协的设计
-            if (element._filter_children.length === 0) {
+            // 必须在这里修改状态才行，在其它地方修改还得重新刷新 item
+            if (element.filted_children.length === 0) {
                 element.set_collapsible_state();
             }
         }
@@ -340,7 +341,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     getChildren(element?: CureSymbolTreeItem): Thenable<CureSymbolTreeItem[]> {
         if (element) {
-            const items = element._filter_children ?? element.Children;
+            const items = element.filted_children ?? element.Children;
             return Promise.resolve(this.apply_sort(items));
         } else {
             return Promise.resolve(this.apply_sort(this.apply_filter(this.Items)));
@@ -469,7 +470,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
         if (changed) {
             for (const item of this.Items) {
-                item.reset_filter_children();
+                item.reset_filted_children();
             }
             this.refresh();
         }

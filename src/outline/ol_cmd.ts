@@ -253,7 +253,10 @@ export class CureSymbolTreeViewCMD {
         }
         // 需要先对 items 进行复制，然后按位置排序
         // 因为 _items 是引用，如果直接对 _items 排序，那么排序后的结果会影响到原始的数据啦
-        const items = CureOneSymbol.sort_by_position([..._items]);
+        const items =
+            this.provider.sort_type !== "position"
+                ? CureOneSymbol.sort_by_position([..._items])
+                : _items;
 
         // 因为 items 已经按位置排序了，所以可以二分查找，而不是遍历 —— 额，好像也没有多少提升
         let i_start = 0;

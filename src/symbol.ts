@@ -271,7 +271,12 @@ export class CureOneSymbol {
         );
         // 开始向上不断查看注释内容
         while (curr_line >= 0) {
-            const line = curr_doc.lineAt(curr_line).text.trim();
+            const _line = curr_doc.lineAt(curr_line);
+            if (_line.isEmptyOrWhitespace) {
+                --curr_line;
+                continue;
+            }
+            const line = _line.text.trim();
 
             // 如果是块注释的开始，那么就跳出循环
             if (this.is_block_comment_start(curr_doc.languageId.toLowerCase(), line)) {
