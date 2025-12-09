@@ -52,7 +52,6 @@ export class CureOneSymbol {
         return new CureOneSymbol(
             uri,
             symbol.name,
-            // 获取 symbol kind 的字符串形式
             vscode.SymbolKind[symbol.kind] as CureSymbolKind,
             symbol.detail,
             symbol.range,
@@ -84,8 +83,8 @@ export class CureOneSymbol {
             name || detail,
             "CureLineBookmark",
             name ? detail : "",
-            new vscode.Range(line, col, line, col),
-            new vscode.Range(line, col, line, col + text.length)
+            new vscode.Range(line, col, line, col + text.length),
+            new vscode.Range(line, col, line, col)
         );
     }
 
@@ -106,7 +105,7 @@ export class CureOneSymbol {
             name,
             "CureCustomBookmark",
             CureOneSymbol.create_line_info(line, col),
-            new vscode.Range(line, col, line, col),
+            new vscode.Range(line, col, line, col + name.length),
             new vscode.Range(line, col, line, col)
         );
     }
@@ -145,6 +144,7 @@ export class CureOneSymbol {
 
     public set Children(children: CureOneSymbol[]) {
         this.children = children;
+        this.once_children = [];
     }
 
     /** 获取所在行、列信息，如 (Ln 1, Col 1) */
@@ -244,7 +244,6 @@ export class CureOneSymbol {
         }
         // #cure-warn 这里有问题，居然访问当前文档！但是好像也不应该访问其它文件
         // 此处仅仅是开发过程中的调试
-        /** 当前打开的文档对象 */
         const curr_doc = vscode.window.activeTextEditor?.document;
         if (curr_doc === undefined || curr_doc.uri.toString() !== this.uri.toString()) {
             return "";
@@ -255,7 +254,6 @@ export class CureOneSymbol {
             return "";
         }
 
-        /** 符号所在行的内容 */
         const curr_line_text = curr_doc.lineAt(start_line).text.trim();
         if (start_line === 0) {
             this.comment = curr_line_text;

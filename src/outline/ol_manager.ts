@@ -27,7 +27,7 @@ export class CureSymbolManager {
     /** 保存上一次解析出的原始符号 */
     private symbols: vscode.DocumentSymbol[] = [];
     /** 保存上一次解析出的 #region 符号 */
-    private region_symbols?: CureOneSymbol[];
+    private regions?: CureOneSymbol[];
     /** 解析出的文件符号咯 */
     public get Symbols() {
         return this.file ? this.insert_region_symbols() : [];
@@ -49,7 +49,7 @@ export class CureSymbolManager {
     private reset_state() {
         this.retry_count = 0;
         this.symbols = [];
-        this.region_symbols = undefined;
+        this.regions = undefined;
     }
 
     /** 重新解析一个文档！成功则返回 true
@@ -63,7 +63,7 @@ export class CureSymbolManager {
         let ok = true;
         try {
             await this.update_symbols();
-            this.region_symbols = await bm_manager.update_file(file, content);
+            this.regions = await bm_manager.update_file(file, content);
             bm_reload();
         } catch (e: any) {
             vscode.window.showWarningMessage(`get file symbols error: ${e.message}`);
@@ -71,6 +71,8 @@ export class CureSymbolManager {
         }
         return ok;
     }
+
+    //#region 符号的更新、差异对比
 
     /** 获取和上次解析符号时的差异信息，用于更新符号树
      *@param content 文档的内容
@@ -80,7 +82,7 @@ export class CureSymbolManager {
         const last_symbols = this.symbols;
         await this.update_symbols();
         const new_symbols = this.symbols;
-        this.region_symbols = await bm_manager.update_file(this.file!, content);
+        this.regions = await bm_manager.update_file(this.file!, content);
         bm_reload();
         return this._get_diff_info(last_symbols, new_symbols);
     }
@@ -117,6 +119,8 @@ export class CureSymbolManager {
         return false;
     }
 
+    //#endregion
+
     /** 更新文档中的符号列表 */
     private async update_symbols() {
         const self = this;
@@ -127,7 +131,7 @@ export class CureSymbolManager {
             "vscode.executeDocumentSymbolProvider",
             self.file
         );
-        // 要么文件没有内容，或者是解析服务还没有完成
+        // 要么文件解析不出符号，或者是解析服务还没有完成
         if (symbols === undefined && self.retry_count < retry_max) {
             self.retry_count++;
             // 确保解析完成
@@ -145,12 +149,12 @@ export class CureSymbolManager {
     /** 将 `#region` 符号插入到当前语法符号树中，返回新的符号树 */
     private insert_region_symbols() {
         const cure_symbols = this.symbols.map((v) => CureOneSymbol.from_raw_symbol(this.file!, v));
-        if (!this.region_symbols || this.region_symbols.length === 0) {
+        if (!this.regions || this.regions.length === 0) {
             return cure_symbols;
         }
-        // 首先将 region_symbols 按照位置排序（cure_symbols 在获取时已经排序了）
-        CureOneSymbol.sort_by_position(this.region_symbols, true);
-        return this._insert_region_symbols(cure_symbols, this.region_symbols);
+
+        CureOneSymbol.sort_by_position(this.regions, true);
+        return this._insert_region_symbols(cure_symbols, this.regions);
     }
 
     /** 递归合并 */
