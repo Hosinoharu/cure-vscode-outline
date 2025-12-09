@@ -341,7 +341,7 @@ export class CureSymbolTreeViewCMD {
         if (second) {
             console.log(title, ":", first.name, "-", second.name);
             // 只有按位置排序排序时，才需要高亮两个表示位于【两个符号中间】
-            if (this.provider.Sorttype === "position") {
+            if (this.provider.sort_type === "position") {
                 this.item_handler.highlight(first, second);
             } else {
                 this.item_handler.unhighlight();
@@ -426,7 +426,7 @@ export class CureSymbolTreeViewCMD {
             follow_viewport_interval
         );
         return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
-            if (this.provider.Sorttype !== "position") {
+            if (this.provider.sort_type !== "position") {
                 return vscode.window.showInformationMessage(
                     "Follow Viewport only works when sort type is 'by position'"
                 );
@@ -443,7 +443,7 @@ export class CureSymbolTreeViewCMD {
                 if (
                     this.view.visible &&
                     this.item_handler.CanFollowViewport &&
-                    this.provider.Sorttype === "position"
+                    this.provider.sort_type === "position"
                 ) {
                     debounce_follow_viewport(e.textEditor);
                 }

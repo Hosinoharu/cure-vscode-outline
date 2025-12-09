@@ -191,21 +191,18 @@ export class CureSymbolManager {
             if (s.contains(curr_region)) {
                 s.Children = this._insert_region_symbols(s.Children, [curr_region]);
                 result.push(s);
-                continue;
             }
             // s 在 region 之前
-            if (s.is_before(curr_region)) {
+            else if (s.is_before(curr_region)) {
                 result.push(s);
-                continue;
             }
             // s 在 region 之后，说明该 #region 处理完成了
-            else if (s.is_after(curr_region)) {
+            else {
                 result.push(curr_region);
                 curr_region = regions[++i_r];
                 handled = true;
                 // 当前的 s 还要用于下一个 region 的判断，所以这里索引减少 1
                 --i_s;
-                continue;
             }
         }
 

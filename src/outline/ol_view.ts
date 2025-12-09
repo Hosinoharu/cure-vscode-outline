@@ -35,7 +35,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         return this.symbol.Comment || this.symbol.name;
     }
     /** 判断当前 item 是否位于顶层 */
-    public get IsTopLevel() {
+    public get is_top() {
         return this.parent === undefined;
     }
     /** 该 item 的名称 */
@@ -53,17 +53,15 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         const item = new CureSymbolTreeItem(symbol.name, symbol);
         item.once_children = symbol.Children;
         item.iconPath = symbol.Icon;
-        // 实现符号的点击
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
         // 添加 command 后，点击时不再会自动展开了，所以需要手动处理
         item.command = CureSymbolCMD.Instance.create_locate(item, async () => {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
-        // item.description = symbol.detail || symbol.kind + " " + symbol.LineInfo;
         // 显示它有多少个子元素咯
         item.description =
             (symbol.Children.length > 0 ? `(${symbol.Children.length}) ` : "") + symbol.kind;
-        // item.tooltip 被延迟赋值了哟，在 provider.resolveTreeItem API 中
+        // item.tooltip 被延迟赋值了哟，仅在 hover 时触发，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();
         return item;
@@ -82,16 +80,16 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     // 核心思想：设置 item.label 时，可以指定 label 中的高亮部分
     // 从而实现高亮效果，虽然效果不太好就是了！
 
-    private is_highlighted = false;
+    private highlighted = false;
     /** 高亮元素或取消高亮，返回 true 表示操作成功。后期需要手动刷新 item。
      *
      * **只能在 `follow cursor、follow viewport` 时启用高亮**
      */
     public highlighten(ok: boolean) {
-        if (ok === this.is_highlighted) {
+        if (ok === this.highlighted) {
             return false;
         }
-        this.is_highlighted = ok;
+        this.highlighted = ok;
         const label = ok
             ? ({ label: this.name, highlights: [[0, this.name.length]] } as vscode.TreeItemLabel)
             : this.name;
@@ -156,11 +154,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     //#region 符号位置上的判断-用于 follow by cursor 功能
 
-    // 注意 symbol.range 和 symbol.selection_range 的区别！
-    // 前者表示整个区域，比如对于函数来说，它涵盖了函数体
-    // 后者表示符号自身的位置，比如对于函数来说，它只表示函数名
-    // 如果是一个没有名字的函数，那么两者是一样的
-
     /** 判断当前 item 是否包含 other
      * @param selection 如果为 true，则仅查看符号名称的位置，否则查看整个符号的位置
      */
@@ -216,13 +209,13 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     /** 判断 p 是否和 item 具备相同的顶层节点 */
     public is_same_top_parent(p: CureSymbolTreeItem) {
-        const a = this.get_top_level();
-        const b = p.get_top_level();
+        const a = this.get_top();
+        const b = p.get_top();
         return a.equal(b);
     }
 
     /** 一直向上找，找到顶层节点 */
-    private get_top_level() {
+    private get_top() {
         let p = this as CureSymbolTreeItem;
         while (p.parent) {
             p = p.parent;
@@ -248,7 +241,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     /** 是否满足过滤的条件 */
     public is_match_filter(type: OutlineFilterType) {
         const kind = this.symbol.kind;
-        const is_global = this.IsTopLevel;
+        const is_global = this.is_top;
         const is_var = kind === "Variable" || kind === "Constant";
 
         switch (type) {
@@ -270,7 +263,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         if (diff.refresh) {
             // console.log("diff:", last_symbol.name, "->", new_symbol.name);
             refresh = true;
-            if (this.is_highlighted) {
+            if (this.highlighted) {
                 this.label = { label: new_symbol.name, highlights: [[0, new_symbol.name.length]] };
             } else {
                 this.label = new_symbol.name;
@@ -314,11 +307,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 管理符号 */
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
-    private sort_type: OutlineSortType = olstorage.get_sort_type();
-    /** 当前的排序方式 */
-    public get Sorttype() {
-        return this.sort_type;
-    }
+    public sort_type: OutlineSortType = olstorage.get_sort_type();
     /** 表示 item 的过滤类型 */
     private filter_types: OutlineFilterType[] = olstorage.get_filters();
     /** 相当于一个缓存，它总是保存全部的符号。某些情况下需要重新获取符号树时，应该将其设置为 undefined */
@@ -382,8 +371,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 应用过滤条件 */
     private apply_filter(elements: CureSymbolTreeItem[]) {
-        // 注意了，Array.filter(func) 中，是将 func(item) 返回为 true 的 item 筛选出来
-        // 所以如果 item 满足过滤条件之后，还得取反
         return this.filter_types.length > 0
             ? elements.filter((v) => !this.is_match_filter(v))
             : elements;
@@ -393,7 +380,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     //#region 排序
 
-    /** 大坑！因为是通过执行 vscode command 来获取符号的，不要视图认为符号默认以位置排序！
+    /** 警告！因为是通过执行 vscode command 来获取符号的，不要认为符号默认以位置排序！
      * 因为它受到 vscode 自带的 outline 的配置项影响！
      *
      * 也就是说，如果 vscode 的 outline 配置项是按照名称排序的，那么获取的符号树也是按照名称排序的！
@@ -443,42 +430,44 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 重新加载数据，会重置现有符号树的折叠、高亮等状态 */
     private reload() {
         this.items = undefined;
+        CureSymbolTreeItemHandler.Instance.reset_state();
         this.refresh();
     }
 
     /** 排序视图 */
     sort_by(type: OutlineSortType) {
-        if (this.sort_type !== type) {
-            this.sort_type = type;
-            olstorage.set_sort_type(type);
-            CureSymbolTreeItemHandler.Instance.unhighlight_when_change_sort();
-            this.refresh();
+        if (this.sort_type === type) {
+            return;
+        }
+        this.sort_type = type;
+        olstorage.set_sort_type(type);
+        CureSymbolTreeItemHandler.Instance.unhighlight_when_change_sort();
+        this.refresh();
 
-            if (type !== "position") {
-                CureSymbolTreeViewCMD.Instance.when_sort_by_position_off();
-            }
+        if (type !== "position") {
+            CureSymbolTreeViewCMD.Instance.when_sort_by_position_off();
         }
     }
 
     /** 过滤符号。如果已经应用过了，则取消该过滤 */
     filter_by(type: OutlineFilterType) {
-        let ok = false;
+        let changed = false;
 
         // 应用过滤
         if (!this.filter_types.includes(type)) {
             this.filter_types.push(type);
-            ok = true;
+            changed = true;
             olstorage.add_filter(type);
         }
         // 取消过滤
         else {
             const old = this.filter_types.length;
             this.filter_types = this.filter_types.filter((v) => v !== type);
-            ok = old !== this.filter_types.length;
+            changed = old !== this.filter_types.length;
             olstorage.remove_filter(type);
         }
 
-        if (ok) {
+        if (changed) {
             for (const item of this.Items) {
                 item.reset_filter_children();
             }
@@ -526,9 +515,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
 /** 综合处理一些 Tree View Item 的操作以及给 tree view 添加事件。单例模式 */
 export class CureSymbolTreeItemHandler {
-    /** 记录当前 outline view 是否可见 */
-    private visible = false;
-
     private static instance?: CureSymbolTreeItemHandler;
 
     private constructor(
@@ -560,8 +546,6 @@ export class CureSymbolTreeItemHandler {
         // 当切换到其它页面时，就是【隐藏】咯
         view.onDidChangeVisibility((e) => {
             // console.log("visibility changed:", e.visible);
-            self.visible = e.visible;
-            // 当显示面板的时候，要更新内容哟
             if (e.visible) {
                 CureSymbolTreeViewCMD.Instance.run_reload_symbol();
             }
@@ -694,14 +678,11 @@ export class CureSymbolTreeItemHandler {
      */
     private record_expaned_item(item: CureSymbolTreeItem, refhresh = true) {
         const is_top_expaned = this._collapse_other_top_level_item(item);
-        // 展开顶层节点
-        if (item.IsTopLevel) {
+        if (item.is_top) {
             if (!is_top_expaned) {
                 this.last_expand_top_items.push(item);
             }
-        }
-        // 展开非顶层节点，那么先折叠同层级的
-        else {
+        } else {
             this._collapase_same_level_item(item);
         }
 
@@ -713,7 +694,7 @@ export class CureSymbolTreeItemHandler {
      * @param [from_record=false] 为 `true` 表示由外部过滤了该 top item，通常情况下忽略该参数
      */
     private unrecord_expaned_item(item: CureSymbolTreeItem, refhresh = true, from_record = false) {
-        if (item.IsTopLevel && !from_record) {
+        if (item.is_top && !from_record) {
             this.last_expand_top_items = this.last_expand_top_items.filter((i) => !i.equal(item));
         }
         if (this._collapase_recorded_item(item.UniqueId)) {
@@ -825,7 +806,6 @@ export class CureSymbolTreeItemHandler {
         first: CureSymbolTreeItem,
         second?: CureSymbolTreeItem
     ) {
-        // 发现重复，不需要处理
         if (first.equal(h) || second?.equal(h)) {
         } else {
             h.highlighten(false);
@@ -851,7 +831,7 @@ export class CureSymbolTreeItemHandler {
         // 高亮成功，说明 second 是新加入的
         if (second?.highlighten(true)) {
         }
-        // 需要对之前的 item 取消高亮
+
         last_first && this._unhighlight(last_first, first, second);
         last_second && this._unhighlight(last_second, first, second);
     }
@@ -874,12 +854,11 @@ export class CureSymbolTreeItemHandler {
 
     /** 当修改排序方式时，这样做：
      * - 排序方式不是 position，如果当前高亮了两个，需要全部取消，否则什么都不做咯。
-     * - 排序方式是 position 时，触发一次 `follow` 操作
-     * 因为高亮两个表示**位于这两个符号中间**，改变排序方式后，高亮两个元素是多余的了。
+     * - 排序方式是 position 时，触发一次 `follow` 操作（如果开启了功能的话）
      */
     public unhighlight_when_change_sort() {
         const { first, second } = this.highlighted;
-        if (this.provider.Sorttype !== "position") {
+        if (this.provider.sort_type !== "position") {
             if (first && second) {
                 this.unhighlight();
             }
@@ -894,14 +873,14 @@ export class CureSymbolTreeItemHandler {
      * 最多高亮两个 item 哟，它们都是相同层级
      */
     public async highlight(first: CureSymbolTreeItem, second?: CureSymbolTreeItem) {
-        if (!this.visible) {
+        if (!this.view.visible) {
             return;
         }
 
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
         // 向上展开 first 的父层级但不刷新 ui。 如果 first 位于顶层，根本不需要向上展开咯
-        if (!first.IsTopLevel) {
+        if (!first.is_top) {
             let parent = first;
             while (parent) {
                 this.record_expaned_item(parent, false);
@@ -921,7 +900,7 @@ export class CureSymbolTreeItemHandler {
             this.unrecord_expaned_item(first, false);
             this.unrecord_expaned_item(second, false);
             // 在顶层时，不能通过刷新 first、second 它们的父元素来刷新（因为都在顶层嘛），所以这里手动刷新
-            if (first.IsTopLevel) {
+            if (first.is_top) {
                 this._collapse_other_top_level_item(first);
             }
             // 这里保持最小化刷新
@@ -934,9 +913,6 @@ export class CureSymbolTreeItemHandler {
         } else {
             this.record_expaned_item(refresh_item);
         }
-        // 在过滤的时候，有些元素不会显示出来的，所以刷新必然出错
-        // 一种方案是：给每个 TreeItem 新增属性 visible，然后判断 visible 可见再刷新
-        // 这里直接简单处理了，反正我看不到错误就是没问题呗 . . . 欸嘿
         try {
             await this.view.reveal(second ?? first);
         } catch {}

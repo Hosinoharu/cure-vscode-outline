@@ -50,7 +50,6 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
             type,
             symbol
         );
-        // item 就没有子项啦
         item.once_children = [];
         item.iconPath = symbol.Icon;
         // 点击该项时，打开文件、跳转对对应的位置咯
@@ -131,7 +130,6 @@ export class CureBookmarkTreeItem extends vscode.TreeItem {
                     category === "custom" ? "bookmark_custom" : "bookmark_item";
                 return CureBookmarkTreeItem.create_item(v, category, type);
             });
-            // 清空原有的子项
             this.once_children = [];
         }
 
@@ -166,7 +164,6 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
     /** 获取最终要展示到 tree view 中的 items */
     private get Items(): CureBookmarkTreeItem[] {
         if (this.items === undefined) {
-            // 创建书签的分类
             for (const [category, bookmarks] of this.manager.Bookmarks) {
                 this.bookmark_categories[category as BookmarkCategory] =
                     CureBookmarkTreeItem.create_category(category as BookmarkCategory, bookmarks);
@@ -208,8 +205,8 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
         this._onDidChangeTreeData.fire(item);
     }
 
-    /** 重新加载数据 */
-    reload() {
+    /** 重新加载全部数据 */
+    private reload() {
         this.items = undefined;
         this.refresh();
     }
@@ -218,6 +215,15 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
     async reload_bookmark(file: vscode.Uri, content: string) {
         const ok = await this.manager.update_file(file, content);
         ok && this.reload();
+    }
+
+    /** 重新加载解析后的自定义书签。在 `outline` 中解析后，再调用本方法更新 bookmark 即可 */
+    reload_custom_bookmark() {
+        const r = this.manager.CustomBookmark.map((v) =>
+            CureBookmarkTreeItem.create_item(v, "custom", "bookmark_custom")
+        );
+        this.bookmark_categories.custom.Children = r;
+        this.refresh(this.bookmark_categories.custom);
     }
 
     /** 将一个 Symbol Tree Item 中的符号加入到 bookmark 中 */

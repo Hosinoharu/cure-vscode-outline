@@ -21,6 +21,6 @@ export async function bm_init(ctx: vscode.ExtensionContext) {
 /** 重新加载书签 */
 export function bm_reload() {
     if (bm_view.visible) {
-        bm_provider.reload();
+        bm_provider.reload_custom_bookmark();
     }
 }

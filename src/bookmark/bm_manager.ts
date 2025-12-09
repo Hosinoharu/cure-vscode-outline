@@ -33,6 +33,9 @@ export class CureBookmarkManager {
     public get Bookmarks() {
         return Object.entries(this.category);
     }
+    public get CustomBookmark() {
+        return this.category.custom;
+    }
 
     /** 获取不同分类的描述信息，用于展示 tooltips */
     public get_category_desc(category: BookmarkCategory) {
@@ -97,7 +100,7 @@ export class CureBookmarkManager {
         // 不需要判断是否为注释之类的情况，反正是我自己用
         const symbols: CureOneSymbol[] = [];
         const ranges: vscode.Range[] = [];
-        const region_handler = CureRegionManager.Instance;
+        const region_handler = CureRegionParser.Instance;
         region_handler.reset(uri);
 
         for (let i = 0; i < lines.length; i++) {
@@ -181,36 +184,37 @@ class OneRegionSymbol {
     }
 }
 
-/** 管理 region 符号以及解析工作。单例模式.
+/** 解析 region 注释。单例模式.
  *
  * # 用法说明
- * - 先调用 `.reset()` 重置状态
+ * - 先调用 `.reset(file)` 重置状态
  * - 然后不断调用 `parse_one_line(line)` 解析每一行
  * - 最后调用 `get_result()` 获取解析结果
  */
-class CureRegionManager {
-    private static instance?: CureRegionManager;
+class CureRegionParser {
+    private static instance?: CureRegionParser;
 
     private constructor() {
-        if (CureRegionManager.instance) {
-            throw new Error("CureRegionManager is already initialized!");
+        if (CureRegionParser.instance) {
+            throw new Error("CureRegionParser is already initialized!");
         }
-        CureRegionManager.instance = this;
+        CureRegionParser.instance = this;
     }
 
     public static get Instance() {
         if (!this.instance) {
-            this.instance = new CureRegionManager();
+            this.instance = new CureRegionParser();
         }
         return this.instance;
     }
 
-    /** 记录匹配对应的 region，以及包含层级关系，用于 outline */
+    /** 记录匹配对应的 region，其中包含层级关系，用于在 `outline` 中展示 */
     private for_outline = [] as CureOneSymbol[];
-    /** 记录匹配对应的 region（不包含层级关系）、以及没有匹配到 endregion 的 region，用于 bookmark */
+    /** 记录匹配对应的 region（不包含层级关系）、以及没有匹配到 endregion 的 region，用于 `bookmark` 中展示 */
     private for_bookmark = [] as CureOneSymbol[];
     /** 模拟堆栈，用于匹配 region 和 endregion */
     private region_stack = [] as OneRegionSymbol[];
+    /** 记录从哪里解析出的符号 */
     private uri?: vscode.Uri;
 
     /** 重置状态
@@ -225,7 +229,6 @@ class CureRegionManager {
 
     /** 获取解析结果 */
     get_result() {
-        // 按位置排序
         CureOneSymbol.sort_by_position(this.for_bookmark);
         // 标记未匹配的 region
         while (true) {
