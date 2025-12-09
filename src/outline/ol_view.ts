@@ -12,6 +12,7 @@ import {
     OneDiffInfo,
     OutlineFilterType,
     OutlineSortType,
+    TreeItemSymbol,
     TreeItemType,
 } from "../types/symbol";
 import { set_context_value } from "../common";
@@ -20,7 +21,7 @@ import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import * as olstorage from "./ol_storage";
 
 /** 表示符号 tree view 的 item */
-export class CureSymbolTreeItem extends vscode.TreeItem {
+export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbol {
     /** 表示该 item 的类型 */
     public readonly type: TreeItemType = "symbol";
     /** 其对应的 symbol 哟 */
@@ -404,41 +405,16 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     private apply_sort(items: CureSymbolTreeItem[]) {
         switch (this.sort_type) {
             case "name":
-                this.sort_by_name(items);
+                CureOneSymbol.sort_by_name(items);
                 break;
             case "kind":
-                this.sort_by_kind(items);
+                CureOneSymbol.sort_by_kind(items);
                 break;
             default:
-                this.sort_by_position(items);
+                CureOneSymbol.sort_by_position(items);
                 break;
         }
         return items;
-    }
-
-    private sort_by_name(items: CureSymbolTreeItem[]) {
-        items.sort((a, b) => {
-            return a.symbol.name.localeCompare(b.symbol.name);
-        });
-    }
-
-    private sort_by_kind(items: CureSymbolTreeItem[]) {
-        // 每个 kind 下的 item 应该按名称排序，所以先按照名称排序
-        this.sort_by_name(items);
-        items.sort((a, b) => {
-            return a.symbol.kind.localeCompare(b.symbol.kind);
-        });
-    }
-
-    private sort_by_position(items: CureSymbolTreeItem[], recurse?: boolean) {
-        items.sort((a, b) => {
-            return a.is_before(b) ? -1 : 1;
-        });
-        if (recurse) {
-            for (const item of items) {
-                this.sort_by_position(item.Children, recurse);
-            }
-        }
     }
 
     //#endregion
@@ -514,7 +490,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     public async reload_symbol(doc: vscode.TextDocument) {
         const content = doc.getText();
         const uri = doc.uri;
-        const ok = await this.manager.update_file(content, uri);
+        const ok = await this.manager.update_file(uri, content);
         ok && this.reload();
         // if (uri && this.manager.is_same_file(uri)) {
         //     const diffs = await this.manager.get_diff_info(content);
@@ -536,7 +512,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         const should_sort = this.sort_type !== "position";
         const items = should_sort ? [...this.Items] : this.Items;
         if (should_sort) {
-            this.sort_by_position(items, true);
+            CureOneSymbol.sort_by_position(items, true);
         }
         for (let i = 0; i < diffs.length; i++) {
             const diff = diffs[i];

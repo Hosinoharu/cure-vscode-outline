@@ -1,4 +1,4 @@
-import type { SymbolKind } from "vscode";
+import type { DocumentSymbol, SymbolKind } from "vscode";
 import type { CureOneSymbol } from "../symbol";
 
 /** 文件符号的种类，包含默认的、以及自定义的
@@ -41,6 +41,12 @@ type OutlineSortType = "name" | "position" | "kind";
  * - `no_global_var`：过滤掉全局变量
  */
 type OutlineFilterType = "no-local-var" | "no-global-var";
+
+interface TreeItemSymbol {
+    symbol: CureOneSymbol;
+    Children: TreeItemSymbol[];
+}
+type SortableSymbol = CureOneSymbol[] | DocumentSymbol[] | TreeItemSymbol[];
 
 //#region 开关类命令
 

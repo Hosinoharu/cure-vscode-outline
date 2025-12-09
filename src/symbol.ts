@@ -5,14 +5,14 @@
  */
 
 import * as vscode from "vscode";
-import type { CureSymbolKind } from "./types/symbol";
+import type { CureSymbolKind, SortableSymbol, TreeItemSymbol } from "./types/symbol";
 import crypto from "crypto";
 
 /** 表示一个文件的任意符号哟，包括语法符号、书签等 */
 export class CureOneSymbol {
     public readonly id: string;
     public readonly name: string;
-    /** 符号的种类，可以根据它确定该符号应该用哪个 icon 来展示 */
+    /** 符号的种类，可以根据它确定该符号应该用哪个 icon 来展示，所以这里使用字符串表示哟 */
     public readonly kind: CureSymbolKind;
     public readonly detail: string;
     /** 表示整体的范围，比如整个函数的范围 */
@@ -362,6 +362,84 @@ export class CureOneSymbol {
      */
     public is_before(other: CureOneSymbol): boolean {
         return this.range.end.isBefore(other.range.start);
+    }
+
+    //#endregion
+
+    //#region 符号的排序的公共函数
+    // 为了兼容很多类型，所以用了很多 @ts-ignore
+
+    /** 对符号进行按位置排序
+     * ```
+     * // 只看符号的起始位置，不在乎结束位置
+     * A.start
+     * B.start
+     * A.end
+     * B.end
+     * ```
+     */
+    static sort_by_position<T extends SortableSymbol>(s: T, recurse = false) {
+        // @ts-ignore
+        const has_symbol = s[0]?.symbol !== undefined;
+        if (has_symbol) {
+            const t = s as TreeItemSymbol[];
+            t.sort((a, b) => a.symbol.range.start.compareTo(b.symbol.range.start));
+        } else {
+            const t = s as CureOneSymbol[];
+            t.sort((a, b) => a.range.start.compareTo(b.range.start));
+        }
+        if (recurse) {
+            s.forEach((item) => {
+                // @ts-ignore
+                CureOneSymbol.sort_by_position(item.Children ?? item.children, true);
+            });
+        }
+        return s;
+    }
+
+    static sort_by_name<T extends SortableSymbol>(s: T, recurse = false) {
+        // @ts-ignore
+        const has_symbol = s[0]?.symbol !== undefined;
+        if (has_symbol) {
+            const t = s as TreeItemSymbol[];
+            t.sort((a, b) => a.symbol.name.localeCompare(b.symbol.name));
+        } else {
+            const t = s as CureOneSymbol[];
+            t.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        if (recurse) {
+            s.forEach((item) => {
+                // @ts-ignore
+                CureOneSymbol.sort_by_name(item.Children ?? item.children, true);
+            });
+        }
+        return s;
+    }
+
+    /** 按照符号的种类排序，同时内部按照名称排序哟 */
+    static sort_by_kind<T extends SortableSymbol>(s: T, recurse = false) {
+        // 每个 kind 下的 item 应该按名称排序，所以先按照名称排序
+        this.sort_by_name(s, recurse);
+        // @ts-ignore
+        const has_symbol = s[0]?.symbol !== undefined;
+        if (has_symbol) {
+            const t = s as TreeItemSymbol[];
+            t.sort((a, b) => a.symbol.kind.localeCompare(b.symbol.kind));
+        } else {
+            if (s[0] instanceof CureOneSymbol) {
+                const t = s as CureOneSymbol[];
+                t.sort((a, b) => a.kind.localeCompare(b.kind));
+            } else {
+                const t = s as vscode.DocumentSymbol[];
+                t.sort((a, b) => a.kind - b.kind);
+            }
+        }
+        if (recurse) {
+            s.forEach((item) => {
+                // @ts-ignore
+                CureOneSymbol.sort_by_kind(item.Children ?? item.children, true);
+            });
+        }
     }
 
     //#endregion
