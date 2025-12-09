@@ -53,9 +53,7 @@ export class CureBookmarkTreeViewCMD {
     private register_reload_bookmark() {
         return vscode.commands.registerCommand(this.cmd_reload_bookmark, () => {
             const doc = vscode.window.activeTextEditor?.document;
-            if (doc) {
-                this.provider.reload_bookmark(doc.uri, doc.getText());
-            }
+            doc && this.provider.reload_bookmark(doc);
         });
     }
 

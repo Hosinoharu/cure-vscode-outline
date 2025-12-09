@@ -86,26 +86,28 @@ export class CureBookmarkManager {
     }
 
     /** 读取文档内容，解析出其中的自定义标签
-     * @param uri 指定解析出的书签来自哪里
-     * @param content 文档内容
      *
      * @return 返回解析后的 #region 符号！如果返回 undefined 表示解析失败
      */
-    public async update_file(uri: vscode.Uri, content: string) {
+    public async update_file(doc: vscode.TextDocument) {
+        const uri = doc.uri;
         if (vscode.window.activeTextEditor?.document.uri.fsPath !== uri.fsPath) {
             return undefined;
         }
 
-        const lines = content.split("\n");
         // 不需要判断是否为注释之类的情况，反正是我自己用
         const symbols: CureOneSymbol[] = [];
         const ranges: vscode.Range[] = [];
         const region_handler = CureRegionParser.Instance;
         region_handler.reset(uri);
 
-        for (let i = 0; i < lines.length; i++) {
-            region_handler.parse_one_line(lines[i], i);
-            const match_result = this.parse_format(lines[i]);
+        for (let i = 0; i < doc.lineCount; i++) {
+            const line = doc.lineAt(i);
+            if (line.isEmptyOrWhitespace) {
+                continue;
+            }
+            region_handler.parse_one_line(line.text, i);
+            const match_result = this.parse_format(line.text);
             if (!match_result) {
                 continue;
             }

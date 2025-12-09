@@ -172,7 +172,7 @@ export class CureOneSymbol {
 
         // 处理自定义的 symbol kind
         if (this.kind === "CureRegion") {
-            return new vscode.ThemeIcon(`symbol-namespace`);
+            return new vscode.ThemeIcon("list-unordered");
         } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
             return new vscode.ThemeIcon("bookmark");
         }

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { CureOneSymbol } from "../symbol";
 import { OneDiffInfo } from "../types/symbol";
 import { retry_interval, retry_max } from "../settings";
-import { bm_manager, bm_reload } from "../bookmark";
+import { bm_manager, bm_reload_for_ol } from "../bookmark";
 
 /** 管理一个文件的语法符号。单例模式 */
 export class CureSymbolManager {
@@ -52,19 +52,15 @@ export class CureSymbolManager {
         this.regions = undefined;
     }
 
-    /** 重新解析一个文档！成功则返回 true
-     *
-     * @param file 要解析的文件路径
-     * @param content 文档的内容，用于解析自定义符号，主要是解析出 #region 符号
-     */
-    public async update_file(file: vscode.Uri, content: string) {
+    /** 重新解析一个文档！成功则返回 true */
+    public async update_file(doc: vscode.TextDocument) {
         this.reset_state();
-        this.file = file;
+        this.file = doc.uri;
         let ok = true;
         try {
             await this.update_symbols();
-            this.regions = await bm_manager.update_file(file, content);
-            bm_reload();
+            this.regions = await bm_manager.update_file(doc);
+            bm_reload_for_ol();
         } catch (e: any) {
             vscode.window.showWarningMessage(`get file symbols error: ${e.message}`);
             ok = false;
@@ -75,15 +71,14 @@ export class CureSymbolManager {
     //#region 符号的更新、差异对比
 
     /** 获取和上次解析符号时的差异信息，用于更新符号树
-     *@param content 文档的内容
      * @returns 返回 undefined 表示彻底重新加载整个符号树
      */
-    public async get_diff_info(content: string): Promise<OneDiffInfo[] | undefined> {
+    public async get_diff_info(doc: vscode.TextDocument): Promise<OneDiffInfo[] | undefined> {
         const last_symbols = this.symbols;
         await this.update_symbols();
         const new_symbols = this.symbols;
-        this.regions = await bm_manager.update_file(this.file!, content);
-        bm_reload();
+        this.regions = await bm_manager.update_file(doc);
+        bm_reload_for_ol();
         return this._get_diff_info(last_symbols, new_symbols);
     }
 
