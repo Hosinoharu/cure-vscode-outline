@@ -175,6 +175,10 @@ class OneRegionSymbol {
     public add_child(child: CureOneSymbol) {
         this.children.push(child);
     }
+
+    public get Children() {
+        return this.children;
+    }
 }
 
 /** 管理 region 符号以及解析工作。单例模式.
@@ -222,13 +226,22 @@ class CureRegionManager {
     /** 获取解析结果 */
     get_result() {
         // 按位置排序
-        this.for_bookmark.sort((a, b) => a.range.start.line - b.range.start.line);
+        CureOneSymbol.sort_by_position(this.for_bookmark);
         // 标记未匹配的 region
-        for (const r of this.region_stack) {
+        while (true) {
+            const r = this.region_stack.pop();
+            if (!r) {
+                break;
+            }
             r.name = `(drop) ` + r.name;
             // 按照位置排序，从开头插入，这样没有匹配的 region 将靠前显示，便于解决
             this.for_bookmark.unshift(r.create_region_symbol_bm(this.uri!));
+            // 注意，如果 r 具备 children，说明其已经匹配了哟，需要提取它们！
+            for (const c of r.Children) {
+                this.for_outline.push(c);
+            }
         }
+
         return {
             /** 用于 outline 展示，包含 region 的层级关系以及保证配对 */
             for_outline: this.for_outline,
