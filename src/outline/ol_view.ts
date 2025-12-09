@@ -264,8 +264,18 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     //#region 符号的更新
 
-    /** 更新底层的 symbol，返回 true 说明要刷新本 item */
-    public update_new_symbol(new_symbol: CureOneSymbol) {
+    /** 更新底层的 symbol，返回 true 说明要刷新本 item
+     * @param refresh_it 刷新函数
+     * @param refhresh_parent 标记它的父节点是否刷新
+     * - 如果父节点刷新，那么在处理本节点时就不会刷新，等待父节点处理结束时统一刷新
+     * - 如果父节点不刷新，那么在处理本节点时就会刷新
+     * - 上面这样的设计是尽可能做最小化刷新啦
+     */
+    public update_new_symbol(
+        new_symbol: CureOneSymbol,
+        refresh_it: (item: CureSymbolTreeItem) => void,
+        refhresh_parent: boolean
+    ) {
         const last_symbol = this.symbol;
         let refresh = this.is_need_refresh(new_symbol);
         // 需要更新符号的 name、图标等
@@ -307,9 +317,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         else if (expanded) {
             for (let i = 0; i < new_symbol.children.length; i++) {
                 // 递归处理
-                if (this.Children[i].update_new_symbol(new_symbol.children[i])) {
-                    refresh = true;
-                }
+                this.Children[i].update_new_symbol(new_symbol.children[i], refresh_it, refresh);
             }
         }
 
@@ -317,12 +325,17 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         if (new_symbol.children.length === 0) {
             this.set_collapsible_state();
         } else if (this.collapsibleState === vscode.TreeItemCollapsibleState.None) {
+            // 因为改动了这里，说明当前正在编辑，所以将这里默认展开
             this.set_collapsible_state(true);
         }
 
         this.tooltip = undefined;
         this.symbol = new_symbol;
-        refresh && this.ready_update(); // 标记它会更新
+        if (!refhresh_parent && refresh) {
+            this.ready_update();
+            refresh_it(this);
+            console.log("living update item:", this.name);
+        }
         return refresh;
     }
 
@@ -538,8 +551,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         for (let i = 0; i < new_symbols.length; i++) {
             const new_symbol = new_symbols[i];
             const item = this.Items[i];
-            const ok = item.update_new_symbol(new_symbol);
-            ok && this.refresh(item);
+            item.update_new_symbol(new_symbol, (v) => this.refresh(v), false);
         }
     }
 }
