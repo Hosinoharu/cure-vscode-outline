@@ -279,15 +279,11 @@ export class CureSymbolTreeViewCMD {
         while (i_start < i_end) {
             const i_mid = Math.floor((i_start + i_end) / 2);
             const item = items[i_mid];
-
+            // console.log("mid item:", item.name);
             // 这说明在 item 的内部
             if (item.contains(range, false)) {
                 // 继续向下查看是在哪个子元素中
-                if (item.children_length > 0) {
-                    const sub_result = this.get_closer_item(item.Children, range);
-                    return sub_result.first === undefined ? { first: item } : sub_result;
-                }
-                return { first: item };
+                return this._get_closer_item(item, range);
             }
             // 形如 [up...item...range.....down]，更新 up
             else if (item.is_before(range)) {
@@ -302,12 +298,21 @@ export class CureSymbolTreeViewCMD {
         }
 
         if (down_closer_item.contains(range, false)) {
-            return { first: down_closer_item };
+            return this._get_closer_item(down_closer_item, range);
         }
 
         return up_closer_item.equal(down_closer_item)
             ? { first: up_closer_item }
             : { first: up_closer_item, second: down_closer_item };
+    }
+
+    /** 当 item 包含 range 时，需要递归向下处理子元素 */
+    private _get_closer_item(item: CureSymbolTreeItem, range: vscode.Range) {
+        if (item.children_length > 0) {
+            const sub_result = this.get_closer_item(item.Children, range);
+            return sub_result.first === undefined ? { first: item } : sub_result;
+        }
+        return { first: item };
     }
 
     /** 根据鼠标位置，高亮其所在的符号、或者最靠近鼠标的上下两个符号 */
