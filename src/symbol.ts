@@ -208,6 +208,7 @@ export class CureOneSymbol {
     // #endregion 获取符号的图标
 
     // #region 获取符号的注释
+    // 编程语言名称见：https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
 
     /** 注释风格为 c 语言系列 */
     private static readonly c_family_comment = new Set([
@@ -218,8 +219,12 @@ export class CureOneSymbol {
         "javascript",
         "typescript",
         "css",
+        "go",
+        "rust",
+        "dart",
+        "jsonc",
     ]);
-    /** 注释风格为 python 系列 */
+    /** 注释风格为 python 系列，以 # 为注释 */
     private static readonly py_family_comment = new Set(["python", "toml"]);
 
     /** 该符号上面的注释内容 */
