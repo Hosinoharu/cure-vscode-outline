@@ -15,10 +15,12 @@ export class CureOneSymbol {
     /** 符号的种类，可以根据它确定该符号应该用哪个 icon 来展示 */
     public readonly kind: CureSymbolKind;
     public readonly detail: string;
+    /** 表示整体的范围，比如整个函数的范围 */
     public readonly range: vscode.Range;
+    /** 表示符号的范围，比如函数名的范围  */
     public readonly selection_range: vscode.Range;
     /** 存储原始的 symbol，当解析完成之后，此项内容会被删除 */
-    private _children: vscode.DocumentSymbol[];
+    private once_children: vscode.DocumentSymbol[];
     /** 存储解析后的 child symbol */
     private children?: CureOneSymbol[];
     /** 该符号来自哪个文件 */
@@ -40,8 +42,10 @@ export class CureOneSymbol {
         this.detail = detail;
         this.range = range;
         this.selection_range = selection_range;
-        this._children = children;
+        this.once_children = children;
     }
+
+    //#region 创建方式
 
     /** 从原始的符号创建 */
     static from_raw_symbol(uri: vscode.Uri, symbol: vscode.DocumentSymbol): CureOneSymbol {
@@ -127,10 +131,14 @@ export class CureOneSymbol {
         return c;
     }
 
+    //#endregion
+
     public get Children(): CureOneSymbol[] {
         if (this.children === undefined) {
-            this.children = this._children.map((v) => CureOneSymbol.from_raw_symbol(this.uri, v));
-            this._children = [];
+            this.children = this.once_children.map((v) =>
+                CureOneSymbol.from_raw_symbol(this.uri, v)
+            );
+            this.once_children = [];
         }
         return this.children;
     }
@@ -322,6 +330,41 @@ export class CureOneSymbol {
     }
 
     // #endregion 获取符号的注释
+
+    //#region 符号的位置判断
+
+    /** 判断当前符号是否包含另一个符号 */
+    public contains(other: CureOneSymbol): boolean {
+        return this.range.contains(other.range);
+    }
+
+    /** 判断当前符号是否在另一个符号之后。即下面这种情况：
+     * ```
+     * other.start
+     * other.end
+     * // 这才是真正的 my 在 other 之后
+     * my.start
+     * my.end
+     * ```
+     */
+    public is_after(other: CureOneSymbol): boolean {
+        return this.range.start.isAfter(other.range.end);
+    }
+
+    /** 判断当前符号是否在另一个符号之前。即下面这种情况：
+     * ```
+     * my.start
+     * my.end
+     * // 这才是真正的 my 在 other 之前
+     * other.start
+     * other.end
+     * ```
+     */
+    public is_before(other: CureOneSymbol): boolean {
+        return this.range.end.isBefore(other.range.start);
+    }
+
+    //#endregion
 }
 
 /** 通用符号的命令实现与注册 */

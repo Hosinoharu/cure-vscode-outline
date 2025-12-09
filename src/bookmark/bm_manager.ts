@@ -138,7 +138,7 @@ export class CureBookmarkManager {
 /** 临时记录一个 #region 符号 */
 class OneRegionSymbol {
     private children: CureOneSymbol[] = [];
-    private range: vscode.Range;
+    private selection_range: vscode.Range;
 
     /**
      * @param name #region 注释中的内容
@@ -146,25 +146,29 @@ class OneRegionSymbol {
      * @param col 符号所在的列
      */
     constructor(public name: string, private line: number, private col: number) {
-        // 7 是 #region 的长度
-        this.range = new vscode.Range(line, col, line, col + 7);
+        this.selection_range = new vscode.Range(line, col, line, col + "#region".length);
     }
 
     /** 给定 region 的结尾，创建一个用于 outline 展示的符号 */
     public create_region_symbol_ol(uri: vscode.Uri, end_line: number, end_col: number) {
-        const selection_range = new vscode.Range(this.line, this.col, end_line, end_col);
+        const range = new vscode.Range(
+            this.line,
+            this.col,
+            end_line,
+            end_col + "#endregion".length
+        );
         return CureOneSymbol.from_region_bookmark(
             uri,
             this.name,
-            this.range,
-            selection_range,
+            range,
+            this.selection_range,
             this.children
         );
     }
 
     /** 将一个 region 符号转为用于 bookmark 展示的 CureOneSymbol */
     public create_region_symbol_bm(uri: vscode.Uri) {
-        const range = this.range;
+        const range = this.selection_range;
         return CureOneSymbol.from_region_bookmark(uri, this.name, range, range, []);
     }
 

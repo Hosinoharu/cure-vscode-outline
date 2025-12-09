@@ -512,15 +512,17 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 加载一个文档的符号 */
     public async reload_symbol(doc: vscode.TextDocument) {
-        const content = doc.getText().trim();
-        const uri = content === "" ? undefined : doc.uri;
-        if (uri && this.manager.is_same_file(uri)) {
-            const diffs = await this.manager.get_diff_info(content);
-            diffs ? this.apply_diffs(diffs) : this.reload();
-        } else {
-            const ok = await this.manager.update_file(content, uri);
-            ok && this.reload();
-        }
+        const content = doc.getText();
+        const uri = doc.uri;
+        const ok = await this.manager.update_file(content, uri);
+        ok && this.reload();
+        // if (uri && this.manager.is_same_file(uri)) {
+        //     const diffs = await this.manager.get_diff_info(content);
+        //     diffs ? this.apply_diffs(diffs) : this.reload();
+        // } else {
+        //     const ok = await this.manager.update_file(content, uri);
+        //     ok && this.reload();
+        // }
     }
 
     // #endregion 定义事件处理函数
