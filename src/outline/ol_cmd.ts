@@ -283,7 +283,7 @@ export class CureSymbolTreeViewCMD {
             // 这说明在 item 的内部
             if (item.contains(range, false)) {
                 // 继续向下查看是在哪个子元素中
-                if (item.Children.length > 0) {
+                if (item.children_length > 0) {
                     const sub_result = this.get_closer_item(item.Children, range);
                     return sub_result.first === undefined ? { first: item } : sub_result;
                 }

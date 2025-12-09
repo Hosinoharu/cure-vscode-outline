@@ -42,6 +42,10 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     public get name() {
         return this.symbol.name;
     }
+    /** 获取子节点的个数 */
+    public get children_length() {
+        return this.symbol.children.length;
+    }
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -51,7 +55,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     /** 从普通符号创建一个 symbol tree item */
     static create_item(symbol: CureOneSymbol) {
         const item = new CureSymbolTreeItem(symbol.name, symbol);
-        item.once_children = symbol.Children;
+        item.once_children = symbol.children;
         item.iconPath = symbol.Icon;
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
         // 添加 command 后，点击时不再会自动展开了，所以需要手动处理
@@ -59,12 +63,16 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
         // 显示它有多少个子元素咯
-        item.description =
-            (symbol.Children.length > 0 ? `(${symbol.Children.length}) ` : "") + symbol.kind;
+        item.description = item.get_desc(symbol);
         // item.tooltip 被延迟赋值了哟，仅在 hover 时触发，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
         item.reset_collapsible_state();
         return item;
+    }
+
+    /** 生成 tree item 的描述信息 */
+    private get_desc(symbol: CureOneSymbol) {
+        return (symbol.children.length > 0 ? `(${symbol.children.length}) ` : "") + symbol.kind;
     }
 
     /** 标记该 item 应该刷新，刷新之后应该重置其为 false */
@@ -121,7 +129,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         }
 
         // 有 children 还设置为 None？？可能是过滤的情况
-        if (state === vscode.TreeItemCollapsibleState.None && this.Children.length !== 0) {
+        if (state === vscode.TreeItemCollapsibleState.None && this.children_length !== 0) {
             const is_filter = this.filted_children && this.filted_children.length !== 0;
             // 有过滤后的 children，肯定不会设置为 None
             if (is_filter) {
@@ -140,7 +148,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     /** 根据它是否有子元素，重置其折叠状态为【折叠】 */
     private reset_collapsible_state() {
-        if (this.Children.length > 0) {
+        if (this.children_length > 0) {
             this.set_collapsible_state(false);
         } else {
             this.set_collapsible_state();
@@ -189,7 +197,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     /** 获取 Item 的子项 */
     get Children(): CureSymbolTreeItem[] {
-        console.log("get children:", this.name);
         if (this.children === undefined) {
             const parent = this;
             this.children = this.once_children.map((v) => {
@@ -255,15 +262,15 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         }
     }
 
-    /** 应用修改，返回 true 表示将刷新该 item */
-    public apply_diff(diff: OneDiffInfo) {
-        const new_symbol = diff.new;
+    //#region 符号的更新
+
+    /** 更新底层的 symbol，返回 true 说明要刷新本 item */
+    public update_new_symbol(new_symbol: CureOneSymbol) {
         const last_symbol = this.symbol;
-        let refresh = false;
-        // 需要更新符号的 ui 哟
-        if (diff.refresh) {
-            // console.log("diff:", last_symbol.name, "->", new_symbol.name);
-            refresh = true;
+        let refresh = this.is_need_refresh(new_symbol);
+        // 需要更新符号的 name、图标等
+        if (refresh) {
+            // console.log("update item's symbol:", last_symbol.name, "->", new_symbol.name);
             if (this.highlighted) {
                 this.label = { label: new_symbol.name, highlights: [[0, new_symbol.name.length]] };
             } else {
@@ -275,30 +282,57 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
                 this.description = new_symbol.kind;
             }
         }
-        // 更新子节点
-        if (diff.children === undefined) {
-            this.once_children = new_symbol.Children;
+
+        // 更新子节点，注意：如果子节点需要刷新，则本节点也需要刷新
+        const collpased = this.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed;
+        const expanded = this.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
+        const children_changed = this.symbol.children.length !== new_symbol.children.length;
+        if (
+            // 1. 如果本节点没有展开过，所以直接替换子节点
+            this.children === undefined ||
+            // 2. 如果当前节点是折叠，也直接替换子节点！不需要刷新，因为展开的时候会自动刷新
+            collpased ||
+            // 3. 如果子节点个数变化，没办法了，直接替换
+            children_changed
+        ) {
+            this.once_children = new_symbol.children;
             this.children = undefined;
-        } else {
-            for (let i = 0; i < diff.children.length; i++) {
+            // 子节点个数变化时必然要刷新的，因为要更新父节点的描述信息：有几个子节点
+            if (children_changed) {
+                this.description = this.get_desc(new_symbol);
+                refresh = true;
+            }
+        }
+        // 3. 如果当前节点是展开的，那需要递归处理子节点，做到最小化刷新
+        else if (expanded) {
+            for (let i = 0; i < new_symbol.children.length; i++) {
                 // 递归处理
-                if (this.Children[i].apply_diff(diff.children[i])) {
+                if (this.Children[i].update_new_symbol(new_symbol.children[i])) {
                     refresh = true;
                 }
             }
         }
-        // 保持折叠状态，但前提是具备子元素
-        if (this.Children.length === 0) {
+
+        // 保持现有的折叠状态，但前提是具备子元素
+        if (new_symbol.children.length === 0) {
             this.set_collapsible_state();
         } else if (this.collapsibleState === vscode.TreeItemCollapsibleState.None) {
             this.set_collapsible_state(true);
         }
+
         this.tooltip = undefined;
-        // 这个赋值必须调到【操作子节点】的后方，否则 `this.Children` 会访问出错
         this.symbol = new_symbol;
         refresh && this.ready_update(); // 标记它会更新
         return refresh;
     }
+
+    /** 在替换新符号时，判断是否应该刷新 */
+    private is_need_refresh(new_symbol: CureOneSymbol) {
+        // 只有符号名称、符号类型、有无子项（此处不判断这个）等变化时，才需要刷新
+        return new_symbol.name !== this.symbol.name || new_symbol.kind !== this.symbol.kind;
+    }
+
+    //#endregion
 }
 
 /** 提供符号的 TreeView Provider */
@@ -478,36 +512,34 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 加载一个文档的符号 */
     public async reload_symbol(doc: vscode.TextDocument) {
-        const ok = await this.manager.update_file(doc);
-        ok && this.reload();
-        // if (uri && this.manager.is_same_file(uri)) {
-        //     const diffs = await this.manager.get_diff_info(content);
-        //     diffs ? this.apply_diffs(diffs) : this.reload();
-        // } else {
-        //     const ok = await this.manager.update_file(content, uri);
-        //     ok && this.reload();
-        // }
+        if (await this.manager.update_file(doc)) {
+            const new_symbols = this.manager.Symbols;
+            this.update_items(new_symbols);
+        }
     }
 
     // #endregion 定义事件处理函数
 
-    /** 应用差异、更新视图 */
-    private apply_diffs(diffs: OneDiffInfo[]) {
-        if (diffs.length !== this.Items.length) {
-            throw new Error("diff length is not equal to items length!");
+    /** 使用新的语法符号数据来更新语法树 */
+    private update_items(_new_symbols: CureOneSymbol[]) {
+        // 如果顶层符号个数不同，没办法，需要全部替换了
+        if (_new_symbols.length !== this.Items.length) {
+            // 因为已经解析好了数据，只要触发重新加载即可
+            return this.reload();
         }
-        // this.Items 可能排序了，需要调整回来
-        const should_sort = this.sort_type !== "position";
-        const items = should_sort ? [...this.Items] : this.Items;
-        if (should_sort) {
-            CureOneSymbol.sort_by_position(items, true);
-        }
-        for (let i = 0; i < diffs.length; i++) {
-            const diff = diffs[i];
-            const item = items[i];
-            if (item.apply_diff(diff)) {
-                this.refresh(item);
-            }
+        // 个数相同？那就逐一替换内部的 symbol。注意，需要保证排序方式一致！
+        // _new_symbols 默认是按位置排序的，所以要根据当前排序方式进行调整
+        let new_symbols =
+            this.sort_type === "name"
+                ? CureOneSymbol.sort_by_name(_new_symbols)
+                : this.sort_type === "kind"
+                ? CureOneSymbol.sort_by_kind(_new_symbols)
+                : _new_symbols;
+        for (let i = 0; i < new_symbols.length; i++) {
+            const new_symbol = new_symbols[i];
+            const item = this.Items[i];
+            const ok = item.update_new_symbol(new_symbol);
+            ok && this.refresh(item);
         }
     }
 }
@@ -969,14 +1001,14 @@ export class CureSymbolTreeItemHandler {
             const target = this.find_parent_has_range(first, range);
             if (target) {
                 console.log("search items in:", target.name);
-                return target.Children.length > 0 ? target.Children : [target];
+                return target.children_length > 0 ? target.Children : [target];
             }
         }
         if (second) {
             const target = this.find_parent_has_range(second, range);
             if (target) {
                 console.log("search items in:", target.name);
-                return target.Children.length > 0 ? target.Children : [target];
+                return target.children_length > 0 ? target.Children : [target];
             }
         }
         return this.provider.Items;
@@ -1001,7 +1033,7 @@ export class CureSymbolTreeItemHandler {
     private set_items_expand(items: CureSymbolTreeItem[], state: boolean) {
         items.forEach((v) => {
             this.set_expand_state(v, state, false);
-            if (v.Children.length > 0) {
+            if (v.children_length > 0) {
                 this.set_items_expand(v.Children, state);
             }
         });

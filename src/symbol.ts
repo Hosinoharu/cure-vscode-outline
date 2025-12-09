@@ -19,10 +19,8 @@ export class CureOneSymbol {
     public readonly range: vscode.Range;
     /** 表示符号的范围，比如函数名的范围  */
     public readonly selection_range: vscode.Range;
-    /** 存储原始的 symbol，当解析完成之后，此项内容会被删除 */
-    private once_children: vscode.DocumentSymbol[];
     /** 存储解析后的 child symbol */
-    private children?: CureOneSymbol[];
+    public children: CureOneSymbol[];
     /** 该符号来自哪个文件 */
     public readonly uri: vscode.Uri;
 
@@ -42,7 +40,7 @@ export class CureOneSymbol {
         this.detail = detail;
         this.range = range;
         this.selection_range = selection_range;
-        this.once_children = children;
+        this.children = children.map((v) => CureOneSymbol.from_raw_symbol(this.uri, v));
     }
 
     //#region 创建方式
@@ -126,26 +124,11 @@ export class CureOneSymbol {
             range,
             selection_range
         );
-        c.Children = children;
+        c.children = children;
         return c;
     }
 
     //#endregion
-
-    public get Children(): CureOneSymbol[] {
-        if (this.children === undefined) {
-            this.children = this.once_children.map((v) =>
-                CureOneSymbol.from_raw_symbol(this.uri, v)
-            );
-            this.once_children = [];
-        }
-        return this.children;
-    }
-
-    public set Children(children: CureOneSymbol[]) {
-        this.children = children;
-        this.once_children = [];
-    }
 
     /** 获取所在行、列信息，如 (Ln 1, Col 1) */
     public get LineInfo(): string {
@@ -441,6 +424,7 @@ export class CureOneSymbol {
                 CureOneSymbol.sort_by_kind(item.Children ?? item.children, true);
             });
         }
+        return s;
     }
 
     //#endregion
