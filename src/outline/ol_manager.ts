@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { CureOneSymbol } from "../symbol";
-import { OneDiffInfo } from "../types/symbol";
 import { retry_interval, retry_max } from "../settings";
 import { bm_manager, bm_reload_for_ol } from "../bookmark";
 

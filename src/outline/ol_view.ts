@@ -9,7 +9,6 @@ import { CureOneSymbol, CureSymbolCMD } from "../symbol";
 import { CureSymbolManager } from "./ol_manager";
 import {
     HighlightItems,
-    OneDiffInfo,
     OutlineFilterType,
     OutlineSortType,
     TreeItemSymbol,
