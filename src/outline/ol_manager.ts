@@ -122,52 +122,52 @@ export class CureSymbolManager {
 
         /** 记录最终合并的结果 */
         const result: CureOneSymbol[] = [];
-        /** 记录当前的 region 符号的索引 */
+        /** 记录当前处理的符号索引 */
+        let i_s = 0;
+        /** 记录当前处理的 region 符号索引 */
         let i_r = 0;
-        /** 记录当前的 region 符号 */
-        let curr_region = regions[i_r];
-        /** 记录是否处理过当前的 region（也就是加入到最终数组中） */
-        let handled = false;
+        while (i_s < symbols.length && i_r < regions.length) {
+            /** 记录当前处理的符号 */
+            const curr_symbol = symbols[i_s];
+            /** 记录当前的 region 符号 */
+            const curr_region = regions[i_r];
 
-        for (let i_s = 0; i_s < symbols.length; i_s++) {
-            if (i_r >= regions.length) {
-                result.push(symbols[i_s]);
-                continue;
-            }
-
-            const s = symbols[i_s];
             // s 在 region 内部，需要判断 region 中子 region 和 s 的位置关系
-            if (curr_region.contains(s)) {
-                curr_region.children = this._insert_region_symbols([s], curr_region.children);
+            if (curr_region.contains(curr_symbol)) {
+                curr_region.children = this._insert_region_symbols(
+                    [curr_symbol],
+                    curr_region.children
+                );
+                ++i_s;
                 continue;
             }
             // s 包含 region，需要调整 s.child 和 region 的位置
-            if (s.contains(curr_region)) {
-                s.children = this._insert_region_symbols(s.children, [curr_region]);
-                result.push(s);
+            if (curr_symbol.contains(curr_region)) {
+                curr_symbol.children = this._insert_region_symbols(curr_symbol.children, [
+                    curr_region,
+                ]);
+                ++i_r;
             }
             // s 在 region 之前
-            else if (s.is_before(curr_region)) {
-                result.push(s);
+            else if (curr_symbol.is_before(curr_region)) {
+                result.push(curr_symbol);
+                ++i_s;
             }
             // s 在 region 之后，说明该 #region 处理完成了
             else {
                 result.push(curr_region);
-                curr_region = regions[++i_r];
-                handled = true;
-                // 当前的 s 还要用于下一个 region 的判断，所以这里索引减少 1
-                --i_s;
+                ++i_r;
+                // 当前的 s 还要用于下一个 region 的判断，所以这里索引不变
             }
         }
 
-        if (!handled) {
-            result.push(curr_region);
-            ++i_r;
+        if (i_s < symbols.length) {
+            result.push(...symbols.slice(i_s));
         }
-        // 说明还有 region 没有处理完，它们没有包含任何语法符号，也添加到后面吧
         if (i_r < regions.length) {
             result.push(...regions.slice(i_r));
         }
+
         return result;
     }
 
