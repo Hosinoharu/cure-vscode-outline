@@ -164,7 +164,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     /** 判断当前 item 是否包含 other
      * @param selection 如果为 true，则仅查看符号名称的位置，否则查看整个符号的位置
      */
-    public is_contains(other: vscode.Range | CureSymbolTreeItem, selection: boolean) {
+    public contains(other: vscode.Range | CureSymbolTreeItem, selection: boolean) {
         const range = other instanceof vscode.Range ? other : other.symbol.range;
         const p = selection ? "selection_range" : "range";
         return this.symbol[p].contains(range);
@@ -455,7 +455,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             this.refresh();
 
             if (type !== "position") {
-                CureSymbolTreeViewCMD.Instance.run_sort_by_position_off();
+                CureSymbolTreeViewCMD.Instance.when_sort_by_position_off();
             }
         }
     }
@@ -976,7 +976,7 @@ export class CureSymbolTreeItemHandler {
         }
         // 只有一个高亮，看看是否在它的范围内
         if (!second) {
-            return !first?.is_contains(range, true);
+            return !first?.contains(range, true);
         }
         // 两个高亮，看看是否在它们之间
         return !(first?.is_before(range) && second?.is_after(range));
@@ -984,7 +984,7 @@ export class CureSymbolTreeItemHandler {
 
     /** 在确定鼠标位置后，如果它不在高亮元素上，就需要需要查找其最近的元素。现在加入优化：
      * - 假设当前有高亮元素，那么下一次可能是进入该高亮元素内部或者父节点内部，所以：
-     * - 如果当前鼠标位置在**当前高亮元素内部**，那么直接返回该其子元素
+     * - 如果当前鼠标位置在**当前高亮元素内部**，那么直接返回该其子元素（没有子元素就返回自身）
      * - 如果鼠标位置在**高亮元素的父元素内部**，那么直接返回对应父元素的子元素
      * - 否则，就只能从根节点开始查找了
      */
@@ -994,14 +994,14 @@ export class CureSymbolTreeItemHandler {
             const target = this.find_parent_has_range(first, range);
             if (target) {
                 console.log("search items in:", target.name);
-                return target.Children;
+                return target.Children.length > 0 ? target.Children : [target];
             }
         }
         if (second) {
             const target = this.find_parent_has_range(second, range);
             if (target) {
                 console.log("search items in:", target.name);
-                return target.Children;
+                return target.Children.length > 0 ? target.Children : [target];
             }
         }
         return this.provider.Items;
@@ -1011,7 +1011,7 @@ export class CureSymbolTreeItemHandler {
     private find_parent_has_range(item: CureSymbolTreeItem, range: vscode.Range) {
         let parent: CureSymbolTreeItem | undefined = item;
         while (parent) {
-            if (parent.is_contains(range, false)) {
+            if (parent.contains(range, false)) {
                 return parent;
             }
             parent = parent.parent;

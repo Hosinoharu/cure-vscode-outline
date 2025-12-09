@@ -9,6 +9,7 @@ import { debounce } from "../common";
 import { HighlightItems } from "../types/symbol";
 import { follow_cursor_interval, follow_viewport_interval } from "../settings";
 import * as olstorage from "./ol_storage";
+import { CureOneSymbol } from "../symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
 export class CureSymbolTreeViewCMD {
@@ -84,7 +85,6 @@ export class CureSymbolTreeViewCMD {
 
     private register_reload_symbol() {
         return vscode.commands.registerCommand(this.cmd_reload_symbol, async () => {
-            // 获取当前打开的文档 uri
             const doc = vscode.window.activeTextEditor?.document;
             if (doc) {
                 await this.provider.reload_symbol(doc);
@@ -159,7 +159,7 @@ export class CureSymbolTreeViewCMD {
     }
 
     /** 取消 sort_by_position 时（也就是切换排序方式且不为 position 时）需要执行一些操作 */
-    public run_sort_by_position_off() {
+    public when_sort_by_position_off() {
         // 需要取消 follow viewport 哟
         if (olstorage.get_follow_viewport()) {
             this.run_follow_viewport_off();
@@ -239,7 +239,7 @@ export class CureSymbolTreeViewCMD {
     /** 根据行、列，查找距离它最近的 tree item
      * - 如果 line、col 正好在某个 tree item 的位置，则返回该 item
      * - 否则，返回距离它最近的两个 item，向上、向下一个，说明它在两个 item 之间
-     * @returns 返回数组
+     * @returns
      * - 只有一个元素，则说明位于该 item 中
      * - 有两个元素，则说明位于两个 item 之间
      * - 没有元素
@@ -252,13 +252,17 @@ export class CureSymbolTreeViewCMD {
             return {};
         }
         // 需要先对 items 进行复制，然后按位置排序
-        // 因为 items 是引用，如果直接对 items 排序，那么排序后的结果会影响到原始的 items
-        const items = [..._items].sort((a, b) => (a.is_before(b) ? -1 : 1));
+        // 因为 _items 是引用，如果直接对 _items 排序，那么排序后的结果会影响到原始的数据啦
+        const items = CureOneSymbol.sort_by_position([..._items]);
+
+        // 因为 items 已经按位置排序了，所以可以二分查找，而不是遍历 —— 额，好像也没有多少提升
+        let i_start = 0;
+        let i_end = items.length - 1;
 
         /** 向上看，最靠近的 item */
-        let up_closer_item: CureSymbolTreeItem = items[0];
+        let up_closer_item: CureSymbolTreeItem = items[i_start];
         /** 向下看，最靠近的 item */
-        let down_closer_item: CureSymbolTreeItem = items[items.length - 1];
+        let down_closer_item: CureSymbolTreeItem = items[i_end];
 
         // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
         if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
@@ -269,9 +273,12 @@ export class CureSymbolTreeViewCMD {
             return { first: up_closer_item.parent };
         }
 
-        for (const item of items) {
-            // 这说明在 item 的内部！
-            if (item.is_contains(range, false)) {
+        while (i_start < i_end) {
+            const i_mid = Math.floor((i_start + i_end) / 2);
+            const item = items[i_mid];
+
+            // 这说明在 item 的内部
+            if (item.contains(range, false)) {
                 // 继续向下查看是在哪个子元素中
                 if (item.Children.length > 0) {
                     const sub_result = this.get_closer_item(item.Children, range);
@@ -279,19 +286,20 @@ export class CureSymbolTreeViewCMD {
                 }
                 return { first: item };
             }
-            // 更新最靠近的 item 咯
-            else {
-                // 更新向上看最靠近的 item
-                // 如果它在 target 前面、在 up_closer_item 后面，则更新 up_closer_item
-                if (item.is_before(range) && item.is_after(up_closer_item)) {
-                    up_closer_item = item;
-                }
-
-                // 更新向下看最靠近的 item
-                if (item.is_after(range) && item.is_before(down_closer_item)) {
-                    down_closer_item = item;
-                }
+            // 形如 [up...item...range.....down]，更新 up
+            else if (item.is_before(range)) {
+                up_closer_item = item;
+                i_start = i_mid + 1;
             }
+            // 形如 [up...range...item...down]，更新 down
+            else {
+                down_closer_item = item;
+                i_end = i_mid;
+            }
+        }
+
+        if (down_closer_item.contains(range, false)) {
+            return { first: down_closer_item };
         }
 
         return up_closer_item.equal(down_closer_item)
@@ -430,7 +438,7 @@ export class CureSymbolTreeViewCMD {
             if (this.cancel_follow_viewport) {
                 return;
             }
-            // 监听编辑器滚动，当【点击符号】跳转时，也会触发滚动事件
+            // 监听编辑器滚动，注意，当【点击符号】跳转时，也会触发滚动事件 —— 此时需要忽略啦
             this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
                 if (
                     this.view.visible &&
