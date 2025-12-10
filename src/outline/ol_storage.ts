@@ -17,26 +17,38 @@ const setting_follow_cursor = "followCursor";
 const affect_follow_cursor = setting_domaim + "." + setting_follow_cursor;
 
 export async function toggle_follow_cursor(v: boolean) {
-    const t = v ? "follow-cursor" : "follow-cursor-off";
-    update_switch_context(t);
+    update_follow_cursor_context(v);
     await vscode.workspace.getConfiguration(setting_domaim).update(setting_follow_cursor, v, true);
 }
+function update_follow_cursor_context(v: boolean) {
+    const t = v ? "follow-cursor" : "follow-cursor-off";
+    update_switch_context(t);
+}
 export function get_follow_cursor() {
-    return vscode.workspace.getConfiguration(setting_domaim).get(setting_follow_cursor) || false;
+    return (
+        vscode.workspace.getConfiguration(setting_domaim).get<boolean>(setting_follow_cursor) ||
+        false
+    );
 }
 
 const setting_follow_viewport = "followViewport";
 const affect_follow_viewport = setting_domaim + "." + setting_follow_viewport;
 
 export async function toggle_follow_viewport(v: boolean) {
-    const t = v ? "follow-viewport" : "follow-viewport-off";
-    update_switch_context(t);
+    update_follow_viewport_context(v);
     await vscode.workspace
         .getConfiguration(setting_domaim)
         .update(setting_follow_viewport, v, true);
 }
+function update_follow_viewport_context(v: boolean) {
+    const t = v ? "follow-viewport" : "follow-viewport-off";
+    update_switch_context(t);
+}
 export function get_follow_viewport() {
-    return vscode.workspace.getConfiguration(setting_domaim).get(setting_follow_viewport) || false;
+    return (
+        vscode.workspace.getConfiguration(setting_domaim).get<boolean>(setting_follow_viewport) ||
+        false
+    );
 }
 
 //#endregion
@@ -93,6 +105,8 @@ export function init_all_context() {
     get_filters().forEach((v) => {
         update_switch_context(`filter-${v}`);
     });
+    update_follow_cursor_context(get_follow_cursor());
+    update_follow_viewport_context(get_follow_viewport());
 }
 
 /** 更新开关式命令的上下文，此类上下文命名格式：`cure-outline-is-xxx`
