@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { CureOneSymbol } from "../symbol";
+import { CureCommentTable, CureOneSymbol } from "../symbol";
 import { BookmarkCategory } from "../types/symbol";
 import { bookmark_gutter_icon } from "../assets";
 
@@ -101,7 +101,7 @@ export class CureBookmarkManager {
         /** 记录哪些行具备自定义注释 */
         const ranges: vscode.Range[] = [];
         const region_parser = CureRegionParser.Instance;
-        region_parser.reset(uri);
+        region_parser.reset(uri, doc.languageId);
 
         for (let i = 0; i < doc.lineCount; i++) {
             const line = doc.lineAt(i);
@@ -220,15 +220,18 @@ class CureRegionParser {
     private region_stack = [] as OneRegionSymbol[];
     /** 记录从哪里解析出的符号 */
     private uri?: vscode.Uri;
+    /** 记录当前文件的语言 */
+    private languageId?: string;
 
     /** 重置状态
      * @param uri  文件路径，用于初始化符号用的
      */
-    public reset(uri: vscode.Uri) {
+    public reset(uri: vscode.Uri, languageId: string) {
         this.for_outline = [];
         this.for_bookmark = [];
         this.region_stack = [];
         this.uri = uri;
+        this.languageId = languageId;
     }
 
     /** 获取解析结果 */
@@ -263,7 +266,7 @@ class CureRegionParser {
      */
     public parse_one_line(line: string, ln: number) {
         const match_result = this.parse_line(line);
-        if (!match_result || !this.uri) {
+        if (!match_result || !this.uri || !this.languageId) {
             return;
         }
         const { name, col, region } = match_result;
@@ -291,11 +294,30 @@ class CureRegionParser {
     /** 解析 #endregion 注释 */
     private readonly endregion_format = /#endregion/;
 
-    /** 正则匹配出一行中的 region、endregion
+    /** 匹配出一行中的 region、endregion
      * - 如果是 region，则返回其内容（name）、位置（col）以及一个标记（region: true）
      * - 如果是 endregion，则返回其位置（col），并没有包含内容哟
+     *
+     * ## 情况 1：位于行注释的后面
+     * ```js
+     * // #region xxx
+     * // #endregion
+     * ```
+     *
+     * ## 情况 2：位于块注释的中间
+     * 这种情况暂时忽略吧！
+     * ```js
+     * /*
+     *  #region xxx
+     *  #endregion
+     * *\/
+     *```
      */
     private parse_line(line: string) {
+        if (!CureCommentTable.is_line_comment(this.languageId!, line)) {
+            return;
+        }
+
         const region = line.match(this.region_format);
         if (region) {
             return { name: region[1].trim(), col: region.index || 0, region: true };

@@ -208,28 +208,13 @@ export class CureOneSymbol {
     // #endregion 获取符号的图标
 
     // #region 获取符号的注释
-    // 编程语言名称见：https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
-
-    /** 注释风格为 c 语言系列 */
-    private static readonly c_family_comment = new Set([
-        "c",
-        "cpp",
-        "csharp",
-        "java",
-        "javascript",
-        "typescript",
-        "css",
-        "go",
-        "rust",
-        "dart",
-        "jsonc",
-    ]);
-    /** 注释风格为 python 系列，以 # 为注释 */
-    private static readonly py_family_comment = new Set(["python", "toml"]);
 
     /** 该符号上面的注释内容 */
     private comment?: string;
-    /** 获取该符号所在行、以及上方的注释 */
+    /** 获取该符号所在行、以及上方的注释。
+     *
+     * 如果上方是空行，则不会继续向上查找！
+     */
     public get Comment(): string {
         if (this.kind === "CureCustomBookmark" || this.kind === "CureRegion") {
             return this.name;
@@ -258,21 +243,23 @@ export class CureOneSymbol {
         let curr_line = start_line - 1;
         // 如果向上查看的第一行是块注释，则需要标记，直到找到块注释的起始位置为止
         const line = curr_doc.lineAt(curr_line).text.trim();
-        const is_block_comment_end = this.is_block_comment_end(
+        const is_block_comment_end = CureCommentTable.is_block_comment_end(
             curr_doc.languageId.toLowerCase(),
             line
         );
+        is_block_comment_end && comments.unshift(line) && --curr_line;
+
         // 开始向上不断查看注释内容
         while (curr_line >= 0) {
             const _line = curr_doc.lineAt(curr_line);
-            if (_line.isEmptyOrWhitespace) {
-                --curr_line;
-                continue;
+            // 如果不是在块注释区域，那么碰到空行直接结束了
+            if (_line.isEmptyOrWhitespace && !is_block_comment_end) {
+                break;
             }
             const line = _line.text.trim();
 
             // 如果是块注释的开始，那么就跳出循环
-            if (this.is_block_comment_start(curr_doc.languageId.toLowerCase(), line)) {
+            if (CureCommentTable.is_block_comment_start(curr_doc.languageId.toLowerCase(), line)) {
                 comments.unshift(line);
                 break;
             }
@@ -281,7 +268,8 @@ export class CureOneSymbol {
             if (
                 !is_block_comment_end &&
                 // 根据不同语言，查看当前行是否为注释了
-                (!line || !this.is_comment_line(curr_doc.languageId.toLowerCase(), line))
+                (!line ||
+                    !CureCommentTable.is_line_comment(curr_doc.languageId.toLowerCase(), line))
             ) {
                 break;
             }
@@ -293,36 +281,6 @@ export class CureOneSymbol {
 
         this.comment = comments.join("\n");
         return this.comment;
-    }
-
-    /** 判断某行文本是否为块注释的起始 */
-    private is_block_comment_start(language: string, line: string): boolean {
-        if (line.startsWith("/*")) {
-            return CureOneSymbol.c_family_comment.has(language);
-        } else if (line.startsWith("<!--")) {
-            return language === "html";
-        }
-        return false;
-    }
-
-    /** 判断某行文本是否为块注释的结束 */
-    private is_block_comment_end(language: string, line: string): boolean {
-        if (line.startsWith("*/")) {
-            return CureOneSymbol.c_family_comment.has(language);
-        } else if (line.startsWith("-->")) {
-            return language === "html";
-        }
-        return false;
-    }
-
-    /** 判断某行文本是否为注释 */
-    private is_comment_line(language: string, line: string): boolean {
-        if (line.startsWith("//") || line.startsWith("/*")) {
-            return CureOneSymbol.c_family_comment.has(language);
-        } else if (line.startsWith("#")) {
-            return CureOneSymbol.py_family_comment.has(language);
-        }
-        return false;
     }
 
     // #endregion 获取符号的注释
@@ -513,4 +471,163 @@ export class CureSymbolCMD {
     }
 
     // #endregion 定位到符号的位置
+}
+
+/** 表示一种语言的注释信息，如行注释、块注释是怎样的 */
+interface CommentInfo {
+    line: string[];
+    block: { start: string; end: string }[];
+}
+
+/** 通过它查询每个编程语言的行注释、块注释。
+ *
+ * 根据查询 AI，最可靠的方式是**查询对应语言扩展的配置项来获取**，似乎有点麻烦，
+ * 所以直接硬编码在这里了。
+ *
+ * 这些编程语言名称在：https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
+ */
+export class CureCommentTable {
+    /** 存储现有 VSCode 支持的编程语言的注释信息，由 AI 生成！
+     *
+     * 其 `value` 可以是另一个编程语言的名称 —— 因为有些编程语言的注释信息是相同的啦
+     */
+    private static readonly comment_info = new Map<string, string | CommentInfo>([
+        // c 语言系列
+        ["c", { line: ["//"], block: [{ start: "/*", end: "*/" }] }],
+        ["cpp", "c"],
+        ["csharp", "c"],
+        ["javascript", "c"],
+        ["typescript", "c"],
+        ["java", "c"],
+        ["groovy", "c"],
+        ["scala", "c"],
+        ["kotlin", "c"],
+        ["dart", "c"],
+        ["rust", "c"],
+        ["go", "c"],
+        ["swift", "c"],
+        ["objective-c", "c"],
+        ["objective-cpp", "c"],
+        ["php", { line: ["//", "#"], block: [{ start: "/*", end: "*/" }] }],
+
+        // shell 系列
+        ["shellscript", { line: ["#"], block: [] }],
+        [
+            "python",
+            {
+                line: ["#"],
+                block: [
+                    { start: '"""', end: '"""' },
+                    { start: "'''", end: "'''" },
+                ],
+            },
+        ],
+        ["ruby", { line: ["#"], block: [{ start: "=begin", end: "=end" }] }],
+        ["perl", { line: ["#"], block: [{ start: "=begin", end: "=end" }] }],
+        ["perl6", { line: ["#"], block: [{ start: "=begin", end: "=end" }] }],
+        ["r", { line: ["#"], block: [] }],
+        ["lua", { line: ["--"], block: [{ start: "--[[", end: "]]" }] }],
+        ["haskell", { line: ["--"], block: [{ start: "{-", end: "-}" }] }],
+
+        // html/xml 系列
+        ["html", { line: [], block: [{ start: "<!--", end: "-->" }] }],
+        ["xml", "html"],
+        ["xsl", "html"],
+        ["vue", "html"],
+        ["vue-html", "html"],
+        ["razor", "html"],
+
+        // css 系列
+        ["css", { line: [], block: [{ start: "/*", end: "*/" }] }],
+        ["scss", "css"],
+        ["less", "css"],
+        ["sass", "css"],
+        ["stylus", { line: ["//"], block: [] }],
+
+        // 其他语言
+        ["bat", { line: ["::", "REM"], block: [] }],
+        ["ini", { line: [";", "#"], block: [] }],
+        ["makefile", { line: ["#"], block: [] }],
+        ["dockerfile", { line: ["#"], block: [] }],
+        ["dockercompose", { line: ["#"], block: [] }],
+        ["yaml", { line: ["#"], block: [] }],
+        ["json", { line: [], block: [] }],
+        ["jsonc", { line: ["//"], block: [{ start: "/*", end: "*/" }] }],
+        ["markdown", { line: [], block: [] }],
+        ["plaintext", { line: [], block: [] }],
+        ["sql", { line: ["--"], block: [{ start: "/*", end: "*/" }] }],
+        [
+            "pascal",
+            {
+                line: ["//"],
+                block: [
+                    { start: "{", end: "}" },
+                    { start: "(*", end: "*)" },
+                ],
+            },
+        ],
+        ["delphi", "pascal"],
+        ["erlang", { line: ["%"], block: [] }],
+        ["clojure", { line: [";"], block: [{ start: "#_(", end: ")" }] }],
+        ["fsharp", { line: ["//"], block: [{ start: "(*", end: "*)" }] }],
+        ["ocaml", "fsharp"],
+        ["julia", { line: ["#"], block: [{ start: "#=", end: "=#" }] }],
+        ["coffeescript", { line: ["#"], block: [{ start: "###", end: "###" }] }],
+        ["elm", { line: ["--"], block: [{ start: "{-", end: "-}" }] }],
+        ["vim", { line: ['"'], block: [] }],
+        ["matlab", { line: ["%"], block: [{ start: "%{", end: "%}" }] }],
+    ]);
+
+    /** 返回对应编程语言的注释信息 */
+    private static get_comment_info(languageId: string): CommentInfo | undefined {
+        const info = this.comment_info.get(languageId);
+        if (!info) {
+            return undefined;
+        }
+
+        if (typeof info === "string") {
+            return this.get_comment_info(info);
+        }
+
+        return info;
+    }
+
+    /** 判断某一行文本是否为注释 */
+    public static is_line_comment(languageId: string, line: string): boolean {
+        const info = this.get_comment_info(languageId);
+        if (info?.line) {
+            for (const comment of info.line) {
+                if (line.startsWith(comment)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** 判断某行文本是否为块注释的起始 */
+    public static is_block_comment_start(languageId: string, line: string): boolean {
+        const info = this.get_comment_info(languageId);
+        if (info?.block) {
+            for (const comment of info.block) {
+                if (line.startsWith(comment.start)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** 判断某行文本是否为块注释的结束 */
+    public static is_block_comment_end(languageId: string, line: string): boolean {
+        const info = this.get_comment_info(languageId);
+        if (info?.block) {
+            for (const comment of info.block) {
+                if (line.endsWith(comment.end)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
