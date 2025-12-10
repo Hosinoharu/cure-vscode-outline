@@ -825,6 +825,24 @@ export class CureSymbolTreeItemHandler {
 
     //#region 折叠与展开一个item
 
+    /** 记录当前点击的 item。
+     *
+     * ## 说明为什么引入它
+     *
+     * 现在点击一个 item 时会自动展开和折叠，如果点击变成折叠，
+     *
+     * 且当前开启了 `follow cursor` 功能，就会触发元素高亮让元素重新展开！
+     *
+     * 所以在高亮元素时进行判断，如果高亮的是当前点击的 item 时，则不进行展开！
+     *
+     * 注意！实际上这个效果只会短暂生效：
+     * 1. 先点击 item 触发编辑器定位
+     * 2. 触发 follow cursor 高亮
+     * 3. 判断高亮的是否为当前点击的，是则不会展开它
+     * 4. 判断之后立即重置该项，避免后续影响
+     */
+    private curr_clicked_item: CureSymbolTreeItem | undefined;
+
     /** 展开一个 item，并且折叠同级别的 item。如果它已经展开，则折叠它 —— 该 API 仅用于【点击 item】时使用！
      *
      * 其问题如下，均由于 `view.reveal API` 的限制：
@@ -833,7 +851,7 @@ export class CureSymbolTreeItemHandler {
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
     public async expand_only_one(item: CureSymbolTreeItem) {
-        this.disable_follow_cursor();
+        this.curr_clicked_item = item;
         this.disable_follow_viewport();
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
@@ -842,7 +860,6 @@ export class CureSymbolTreeItemHandler {
         }
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
-        this.enable_follow_cursor();
         this.enable_follow_viewport();
     }
 
@@ -970,7 +987,12 @@ export class CureSymbolTreeItemHandler {
                 this.provider.refresh(refresh_item);
             }
         } else {
-            this.record_expaned_item(refresh_item);
+            if (this.curr_clicked_item?.equal(first)) {
+                this.provider.refresh(first);
+            } else {
+                this.record_expaned_item(refresh_item);
+            }
+            this.curr_clicked_item = undefined;
         }
         try {
             await this.view.reveal(second ?? first);
@@ -1011,13 +1033,16 @@ export class CureSymbolTreeItemHandler {
         }
         // 只有一个高亮，看看是否在它的范围内
         if (!second) {
-            // 匿名函数无法准确判断是否在范其名称范围内 —— 因为它都不具备名称
-            // 如果它是匿名函数，并且没有有子元素，那么一定就在其范围内
-            // 否则，可能是在匿名函数内部的子元素中哟
-            if (first?.is_anonymous) {
-                return first.children_length > 0;
+            if (first?.contains(range, true)) {
+                // 匿名函数无法准确判断是否在范其名称范围内 —— 因为它都不具备名称
+                // 如果它是匿名函数，并且没有有子元素，那么一定就在其范围内
+                // 否则，可能是在匿名函数内部的子元素中哟
+                if (first.is_anonymous) {
+                    return first.children_length > 0;
+                }
+                return false;
             }
-            return !first?.contains(range, true);
+            return true;
         }
         // 两个高亮，看看是否在它们之间
         return !(first?.is_before(range) && second?.is_after(range));
