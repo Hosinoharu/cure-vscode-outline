@@ -247,7 +247,6 @@ export class CureOneSymbol {
             curr_doc.languageId.toLowerCase(),
             line
         );
-        is_block_comment_end && comments.unshift(line) && --curr_line;
 
         // 开始向上不断查看注释内容
         while (curr_line >= 0) {
@@ -594,6 +593,7 @@ export class CureCommentTable {
 
     /** 判断某一行文本是否为注释 */
     public static is_line_comment(languageId: string, line: string): boolean {
+        line = line.trim();
         const info = this.get_comment_info(languageId);
         if (info?.line) {
             for (const comment of info.line) {
@@ -607,6 +607,7 @@ export class CureCommentTable {
 
     /** 判断某行文本是否为块注释的起始 */
     public static is_block_comment_start(languageId: string, line: string): boolean {
+        line = line.trim();
         const info = this.get_comment_info(languageId);
         if (info?.block) {
             for (const comment of info.block) {
@@ -620,6 +621,7 @@ export class CureCommentTable {
 
     /** 判断某行文本是否为块注释的结束 */
     public static is_block_comment_end(languageId: string, line: string): boolean {
+        line = line.trim();
         const info = this.get_comment_info(languageId);
         if (info?.block) {
             for (const comment of info.block) {
