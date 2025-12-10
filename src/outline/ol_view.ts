@@ -45,6 +45,12 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     public get children_length() {
         return this.symbol.children.length;
     }
+    /** 是否为匿名的 symbol */
+    public get is_anonymous() {
+        // 不能通过是否具备 name 来判断，比如匿名函数名称为： `xx.map() callback`
+        // 只能根据它的 range 来判断了。正因为它是匿名的，所以下面两个 range 是相等的！
+        return this.symbol.range.isEqual(this.symbol.selection_range);
+    }
 
     private constructor(label: string, symbol: CureOneSymbol) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -998,6 +1004,12 @@ export class CureSymbolTreeItemHandler {
         }
         // 只有一个高亮，看看是否在它的范围内
         if (!second) {
+            // 匿名函数无法准确判断是否在范其名称范围内 —— 因为它都不具备名称
+            // 如果它是匿名函数，并且没有有子元素，那么一定就在其范围内
+            // 否则，可能是在匿名函数内部的子元素中哟
+            if (first?.is_anonymous) {
+                return first.children_length > 0;
+            }
             return !first?.contains(range, true);
         }
         // 两个高亮，看看是否在它们之间
