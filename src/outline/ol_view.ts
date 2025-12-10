@@ -957,7 +957,8 @@ export class CureSymbolTreeItemHandler {
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
         // 向上展开 first 的父层级但不刷新 ui。 如果 first 位于顶层，根本不需要向上展开咯
-        if (!first.is_top) {
+        // 如果它是当前点击的元素，肯定已经展开了咯
+        if (!first.is_top && !this.curr_clicked_item?.equal(first)) {
             let parent = first;
             while (parent) {
                 this.record_expaned_item(parent, false);
