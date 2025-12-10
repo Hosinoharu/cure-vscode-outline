@@ -4,6 +4,7 @@ import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
 import { debounce, is_target_doc } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
+import { ol_storage_init } from "./ol_storage";
 
 export const ol_manager = CureSymbolManager.Instance;
 export const ol_provider = new CureSymbolTreeProvider(ol_manager);
@@ -33,11 +34,11 @@ const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interva
  * - 监听当前文档的切换，
  */
 export async function ol_init(ctx: vscode.ExtensionContext) {
+    CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
     ctx.subscriptions.push(ol_view);
     ctx.subscriptions.push(CureSymbolTreeViewCMD.Instance);
     ctx.subscriptions.push(CureSymbolTreeItemHandler.Instance);
-
-    CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
+    ol_storage_init(ctx);
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {

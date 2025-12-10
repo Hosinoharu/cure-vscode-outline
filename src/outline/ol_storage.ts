@@ -7,68 +7,71 @@
 
 import * as vscode from "vscode";
 import { OutlineFilterType, OutlineSortType, SwitchCmdType } from "../types/symbol";
+import { CureSymbolTreeViewCMD } from "./ol_cmd";
 
 const setting_domaim = "cure-outline";
 
-//#region 排序方式
-
-/** 设置排序方式 */
-export function set_sort_type(type: OutlineSortType) {
-    update_sort_context(type);
-    vscode.workspace.getConfiguration(setting_domaim).update("sortType", type, true);
-}
-/** 获取排序方式 */
-export function get_sort_type(): OutlineSortType {
-    return vscode.workspace.getConfiguration(setting_domaim).get("sortType") || "position";
-}
-
-//#endregion
-
 //#region 是否开启 follow
 
-export function toggle_follow_cursor(v: boolean) {
+const setting_follow_cursor = "followCursor";
+const affect_follow_cursor = setting_domaim + "." + setting_follow_cursor;
+
+export async function toggle_follow_cursor(v: boolean) {
     const t = v ? "follow-cursor" : "follow-cursor-off";
     update_switch_context(t);
-    vscode.workspace.getConfiguration(setting_domaim).update("followCursor", v, true);
+    await vscode.workspace.getConfiguration(setting_domaim).update(setting_follow_cursor, v, true);
 }
 export function get_follow_cursor() {
-    return vscode.workspace.getConfiguration(setting_domaim).get("followCursor") || false;
+    return vscode.workspace.getConfiguration(setting_domaim).get(setting_follow_cursor) || false;
 }
 
-export function toggle_follow_viewport(v: boolean) {
+const setting_follow_viewport = "followViewport";
+const affect_follow_viewport = setting_domaim + "." + setting_follow_viewport;
+
+export async function toggle_follow_viewport(v: boolean) {
     const t = v ? "follow-viewport" : "follow-viewport-off";
     update_switch_context(t);
-    vscode.workspace.getConfiguration(setting_domaim).update("followViewport", v, true);
+    await vscode.workspace
+        .getConfiguration(setting_domaim)
+        .update(setting_follow_viewport, v, true);
 }
 export function get_follow_viewport() {
-    return vscode.workspace.getConfiguration(setting_domaim).get("followViewport") || false;
+    return vscode.workspace.getConfiguration(setting_domaim).get(setting_follow_viewport) || false;
 }
 
 //#endregion
 
 //#region 过滤方式
 
-export function add_filter(type: OutlineFilterType) {
+const setting_filter_type = "filterType";
+const affect_filter_type = setting_domaim + "." + setting_filter_type;
+
+export async function add_filter(type: OutlineFilterType) {
     const filters = get_filters();
     if (!filters.includes(type)) {
         filters.push(type);
         update_switch_context(`filter-${type}`);
-        vscode.workspace.getConfiguration(setting_domaim).update("filterType", filters, true);
+        await vscode.workspace
+            .getConfiguration(setting_domaim)
+            .update(setting_filter_type, filters, true);
     }
 }
-export function remove_filter(type: OutlineFilterType) {
+export async function remove_filter(type: OutlineFilterType) {
     const filters = get_filters();
     const index = filters.indexOf(type);
     if (index > -1) {
         filters.splice(index, 1);
         update_switch_context(`filter-${type}-off`);
-        vscode.workspace.getConfiguration(setting_domaim).update("filterType", filters, true);
+        await vscode.workspace
+            .getConfiguration(setting_domaim)
+            .update(setting_filter_type, filters, true);
     }
 }
 export function get_filters() {
     return (
-        vscode.workspace.getConfiguration(setting_domaim).get<OutlineFilterType[]>("filterType") ||
-        []
+        vscode.workspace
+            .getConfiguration(setting_domaim)
+            .get<OutlineFilterType[]>(setting_filter_type) || []
     );
 }
 
@@ -86,7 +89,7 @@ export function init_all_context() {
     // 默认情况下不展开
     update_switch_context("expand-all-off");
     update_switch_context("expand-only-one-off");
-    update_sort_context(get_sort_type());
+    update_sort_context("position");
     get_filters().forEach((v) => {
         update_switch_context(`filter-${v}`);
     });
@@ -122,3 +125,31 @@ function update_sort_context(type: OutlineSortType) {
 }
 
 //#endregion
+
+/** 监听的配置项修改 */
+export function ol_storage_init(ctx: vscode.ExtensionContext) {
+    ctx.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            // 修改过滤
+            if (e.affectsConfiguration(affect_filter_type)) {
+                CureSymbolTreeViewCMD.Instance.update_filter_from_setting();
+            }
+            // 修改了 follow cursor
+            if (e.affectsConfiguration(affect_follow_cursor)) {
+                if (get_follow_cursor()) {
+                    CureSymbolTreeViewCMD.Instance.core_follow_cursor();
+                } else {
+                    CureSymbolTreeViewCMD.Instance.core_follow_cursor_off();
+                }
+            }
+            // 修改了 follow viewport
+            if (e.affectsConfiguration(affect_follow_viewport)) {
+                if (get_follow_viewport()) {
+                    CureSymbolTreeViewCMD.Instance.core_follow_viewport();
+                } else {
+                    CureSymbolTreeViewCMD.Instance.core_follow_viewport_off();
+                }
+            }
+        })
+    );
+}

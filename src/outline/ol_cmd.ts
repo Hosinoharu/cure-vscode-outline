@@ -160,7 +160,7 @@ export class CureSymbolTreeViewCMD {
     public when_sort_by_position_off() {
         // 需要取消 follow viewport 哟
         if (olstorage.get_follow_viewport()) {
-            this.call_follow_viewport_off();
+            this.execute_follow_viewport_off();
             return vscode.window.showInformationMessage(
                 "Follow Viewport disabled, because sort type is not 'by position'"
             );
@@ -225,6 +225,11 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var_off, () => {
             this.provider.filter_by("no-global-var");
         });
+    }
+
+    /** 触发从配置项中更新 TreeView 的排序方式 */
+    public update_filter_from_setting() {
+        this.provider.FilterTypes = olstorage.get_filters();
     }
 
     //#endregion
@@ -366,7 +371,7 @@ export class CureSymbolTreeViewCMD {
 
     private cancel_follow_cursor?: vscode.Disposable;
 
-    /** 在指定编辑器中执行一次 follow cursor */
+    /** 在指定文档执行一次 follow cursor */
     private _run_follow_cursor(doc: vscode.TextEditor) {
         if (this.view.visible && this.item_handler.CanFollowCursor) {
             this.debounce_follow_cursor(doc);
@@ -384,25 +389,35 @@ export class CureSymbolTreeViewCMD {
         return open;
     }
 
-    private register_follow_cursor() {
-        return vscode.commands.registerCommand(this.cmd_follow_cursor, () => {
-            olstorage.toggle_follow_cursor(true);
-            this.item_handler.enable_follow_cursor(true);
+    /** 命令的主体，但没有修改配置项！ */
+    public core_follow_cursor() {
+        if (this.cancel_follow_cursor === undefined) {
+            this.run_follow_cursor();
+            this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) =>
+                this._run_follow_cursor(e.textEditor)
+            );
+        }
+    }
 
-            if (this.cancel_follow_cursor === undefined) {
-                this.cancel_follow_cursor = vscode.window.onDidChangeTextEditorSelection((e) =>
-                    this._run_follow_cursor(e.textEditor)
-                );
-            }
+    private register_follow_cursor() {
+        return vscode.commands.registerCommand(this.cmd_follow_cursor, async () => {
+            await olstorage.toggle_follow_cursor(true);
+            this.core_follow_cursor();
         });
     }
 
-    private register_follow_cursor_off() {
-        return vscode.commands.registerCommand(this.cmd_follow_cursor_off, () => {
-            olstorage.toggle_follow_cursor(false);
+    public core_follow_cursor_off() {
+        if (this.cancel_follow_cursor !== undefined) {
             this.cancel_follow_cursor?.dispose();
             this.cancel_follow_cursor = undefined;
             this.item_handler.unhighlight();
+        }
+    }
+
+    private register_follow_cursor_off() {
+        return vscode.commands.registerCommand(this.cmd_follow_cursor_off, async () => {
+            await olstorage.toggle_follow_cursor(false);
+            this.core_follow_cursor_off();
         });
     }
 
@@ -435,7 +450,7 @@ export class CureSymbolTreeViewCMD {
         follow_viewport_interval
     );
 
-    /** 在指定编辑器中执行一次 follow viewport */
+    /** 在指定文档执行一次 follow viewport */
     private _run_follow_viewport(editor: vscode.TextEditor) {
         if (
             this.view.visible &&
@@ -457,35 +472,44 @@ export class CureSymbolTreeViewCMD {
         return open;
     }
 
+    public core_follow_viewport() {
+        if (this.cancel_follow_viewport === undefined) {
+            this.run_follow_viewport();
+            // 监听编辑器滚动，注意，当【点击符号】跳转时，也会触发滚动事件 —— 此时需要忽略啦
+            this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) =>
+                this._run_follow_viewport(e.textEditor)
+            );
+        }
+    }
+
     private register_follow_viewport() {
-        return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
+        return vscode.commands.registerCommand(this.cmd_follow_viewport, async () => {
             if (this.provider.sort_type !== "position") {
                 return vscode.window.showInformationMessage(
                     "Follow Viewport only works when sort type is 'by position'"
                 );
             }
-            olstorage.toggle_follow_viewport(true);
-            this.item_handler.enable_follow_viewport(true);
-
-            if (this.cancel_follow_viewport === undefined) {
-                // 监听编辑器滚动，注意，当【点击符号】跳转时，也会触发滚动事件 —— 此时需要忽略啦
-                this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges(
-                    (e) => this._run_follow_viewport(e.textEditor)
-                );
-            }
+            await olstorage.toggle_follow_viewport(true);
+            this.core_follow_viewport();
         });
     }
 
-    private register_follow_viewport_off() {
-        return vscode.commands.registerCommand(this.cmd_follow_viewport_off, () => {
-            olstorage.toggle_follow_viewport(false);
+    public core_follow_viewport_off() {
+        if (this.cancel_follow_viewport !== undefined) {
             this.cancel_follow_viewport?.dispose();
             this.cancel_follow_viewport = undefined;
             this.item_handler.unhighlight();
+        }
+    }
+
+    private register_follow_viewport_off() {
+        return vscode.commands.registerCommand(this.cmd_follow_viewport_off, async () => {
+            await olstorage.toggle_follow_viewport(false);
+            this.core_follow_viewport_off();
         });
     }
 
-    private call_follow_viewport_off() {
+    private execute_follow_viewport_off() {
         vscode.commands.executeCommand(this.cmd_follow_viewport_off);
     }
 

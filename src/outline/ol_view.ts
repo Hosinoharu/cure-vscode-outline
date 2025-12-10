@@ -354,6 +354,12 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     public sort_type: OutlineSortType = "position";
     /** 表示 item 的过滤类型 */
     private filter_types: OutlineFilterType[] = olstorage.get_filters();
+    public set FilterTypes(value: OutlineFilterType[]) {
+        const old = this.filter_types;
+        this.filter_types = value;
+        const changed = old.length !== value.length || old.some((v, i) => v !== value[i]);
+        changed && this.refresh();
+    }
     /** 相当于一个缓存，它总是保存全部的符号。某些情况下需要重新获取符号树时，应该将其设置为 undefined */
     private items?: CureSymbolTreeItem[];
     /** 语法符号树信息 */
@@ -493,24 +499,18 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     }
 
     /** 过滤符号。如果已经应用过了，则取消该过滤 */
-    filter_by(type: OutlineFilterType) {
-        let changed = false;
+    async filter_by(type: OutlineFilterType) {
+        const old = this.filter_types;
 
-        // 应用过滤
-        if (!this.filter_types.includes(type)) {
-            this.filter_types.push(type);
-            changed = true;
-            olstorage.add_filter(type);
-        }
-        // 取消过滤
-        else {
-            const old = this.filter_types.length;
-            this.filter_types = this.filter_types.filter((v) => v !== type);
-            changed = old !== this.filter_types.length;
-            olstorage.remove_filter(type);
+        if (old.includes(type)) {
+            await olstorage.remove_filter(type);
+        } else {
+            await olstorage.add_filter(type);
         }
 
-        if (changed) {
+        this.filter_types = olstorage.get_filters();
+
+        if (old.length !== this.filter_types.length) {
             for (const item of this.Items) {
                 item.reset_filted_children();
             }
