@@ -60,7 +60,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     /** 从普通符号创建一个 symbol tree item */
     static create_item(symbol: CureOneSymbol) {
         const item = new CureSymbolTreeItem(symbol.name, symbol);
-        item.once_children = symbol.children;
         item.iconPath = symbol.Icon;
         // 点击该项时，打开文件、跳转对对应的位置咯，并且只展开它一个！
         // 添加 command 后，点击时不再会自动展开了，所以需要手动处理
@@ -192,11 +191,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
 
     // #region children
 
-    /** Tree Item 的子项，一开始并不解析，等到展开的时候再做解析啦，并且会被清空！
-     *
-     * 也就是说，其它地方不要访问它！
-     */
-    private once_children: CureOneSymbol[] = [];
     /** 存储解析后的结果！ */
     private children?: CureSymbolTreeItem[];
 
@@ -204,13 +198,11 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
     get Children(): CureSymbolTreeItem[] {
         if (this.children === undefined) {
             const parent = this;
-            this.children = this.once_children.map((v) => {
+            this.children = this.symbol.children.map((v) => {
                 const item = CureSymbolTreeItem.create_item(v);
                 item.parent = parent;
                 return item;
             });
-            // 清空原有的子项
-            this.once_children = [];
         }
 
         return this.children;
@@ -310,7 +302,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
             // 3. 如果子节点个数变化，没办法了，直接替换
             children_changed
         ) {
-            this.once_children = new_symbol.children;
             this.children = undefined;
             // 子节点个数变化时必然要刷新的，因为要更新父节点的描述信息：有几个子节点
             if (children_changed) {
