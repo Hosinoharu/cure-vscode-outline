@@ -34,6 +34,9 @@ const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interva
  */
 export async function ol_init(ctx: vscode.ExtensionContext) {
     ctx.subscriptions.push(ol_view);
+    ctx.subscriptions.push(CureSymbolTreeViewCMD.Instance);
+    ctx.subscriptions.push(CureSymbolTreeItemHandler.Instance);
+
     CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
 
     const active_doc = vscode.window.activeTextEditor?.document;
@@ -45,41 +48,47 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     } catch {}
 
     // 监听文档切换
-    vscode.window.onDidChangeActiveTextEditor(async (e) => {
-        if (!e || !should_handle(e.document)) {
-            return;
-        }
-        try {
-            // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
-            const ol_item_handler = CureSymbolTreeItemHandler.Instance;
-            ol_item_handler.disable_follow_cursor();
-            ol_item_handler.disable_follow_viewport();
-            ol_item_handler.reset_state();
-            e && (await debounced_update_symbol(e.document, "switch"));
-        } catch {}
-    });
+    ctx.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(async (e) => {
+            if (!e || !should_handle(e.document)) {
+                return;
+            }
+            try {
+                // 切换文档时，会短暂触发 follow viewport 等，用于这里要临时取消其状态
+                const ol_item_handler = CureSymbolTreeItemHandler.Instance;
+                ol_item_handler.disable_follow_cursor();
+                ol_item_handler.disable_follow_viewport();
+                ol_item_handler.reset_state();
+                e && (await debounced_update_symbol(e.document, "switch"));
+            } catch {}
+        })
+    );
 
     // 监听文件保存
-    vscode.workspace.onDidSaveTextDocument(async (e) => {
-        if (!should_handle(e)) {
-            return;
-        }
-        try {
-            await debounced_update_symbol(e, "save");
-        } catch {}
-    });
+    ctx.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async (e) => {
+            if (!should_handle(e)) {
+                return;
+            }
+            try {
+                await debounced_update_symbol(e, "save");
+            } catch {}
+        })
+    );
 
     // 监听文件修改
-    vscode.workspace.onDidChangeTextDocument(async (e) => {
-        if (!should_handle(e.document)) {
-            return;
-        }
-        try {
-            // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
-            CureSymbolTreeItemHandler.Instance.disable_follow_cursor();
-            await debounced_update_symbol(e.document, "edit");
-        } catch {}
-    });
+    ctx.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(async (e) => {
+            if (!should_handle(e.document)) {
+                return;
+            }
+            try {
+                // 实时编辑文档时，需要临时取消 follow cursor，不然不就是随时触发了嘛
+                CureSymbolTreeItemHandler.Instance.disable_follow_cursor();
+                await debounced_update_symbol(e.document, "edit");
+            } catch {}
+        })
+    );
 }
 
 /** 判断当前文档是否需要处理 */

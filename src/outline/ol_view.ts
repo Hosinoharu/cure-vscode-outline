@@ -574,6 +574,8 @@ export class CureSymbolTreeItemHandler {
         return this.instance;
     }
 
+    private disposables: vscode.Disposable[] = [];
+
     public static register(
         provider: CureSymbolTreeProvider,
         view: vscode.TreeView<CureSymbolTreeItem>
@@ -584,12 +586,14 @@ export class CureSymbolTreeItemHandler {
         // 显示在第一个 item 的上面
         // self.view.message = "message";
         // 当切换到其它页面时，就是【隐藏】咯
-        view.onDidChangeVisibility((e) => {
-            // console.log("visibility changed:", e.visible);
-            if (e.visible) {
-                CureSymbolTreeViewCMD.Instance.run_reload_symbol();
-            }
-        });
+        self.disposables.push(
+            view.onDidChangeVisibility((e) => {
+                // console.log("visibility changed:", e.visible);
+                if (e.visible) {
+                    CureSymbolTreeViewCMD.Instance.run_reload_symbol();
+                }
+            })
+        );
 
         // 可监听以下情况，但无法区分它们：
         // - 点击左侧箭头的展开与折叠
@@ -614,6 +618,10 @@ export class CureSymbolTreeItemHandler {
         //     // 开启多选之后，就会有多个元素了
         //     console.log("selection:", e.selection[0].name);
         // });
+    }
+
+    public dispose() {
+        this.disposables.forEach((d) => d.dispose());
     }
 
     /** 重置内部一些状态 */

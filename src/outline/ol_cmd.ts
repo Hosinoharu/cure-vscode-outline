@@ -488,4 +488,9 @@ export class CureSymbolTreeViewCMD {
     public start_follow_feature() {
         !this.start_follow_cursor() && this.start_follow_viewport();
     }
+
+    public dispose() {
+        this.cancel_follow_cursor?.dispose();
+        this.cancel_follow_viewport?.dispose();
+    }
 }
