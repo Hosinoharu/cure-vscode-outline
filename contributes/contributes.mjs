@@ -335,12 +335,6 @@ const configuration = {
     type: "object",
     title: "Cure Outline",
     properties: {
-        "cure-outline.sortType": {
-            type: "string",
-            default: "position",
-            description: "Sort type",
-            enum: ["position", "kind", "name"],
-        },
         "cure-outline.filterType": {
             type: "array",
             default: [],

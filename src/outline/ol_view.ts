@@ -351,7 +351,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 管理符号 */
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
-    public sort_type: OutlineSortType = olstorage.get_sort_type();
+    public sort_type: OutlineSortType = "position";
     /** 表示 item 的过滤类型 */
     private filter_types: OutlineFilterType[] = olstorage.get_filters();
     /** 相当于一个缓存，它总是保存全部的符号。某些情况下需要重新获取符号树时，应该将其设置为 undefined */
@@ -484,7 +484,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             return;
         }
         this.sort_type = type;
-        olstorage.set_sort_type(type);
         CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
         this.refresh();
 
