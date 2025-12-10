@@ -916,14 +916,14 @@ export class CureSymbolTreeItemHandler {
                 this.unhighlight();
             }
         } else {
-            CureSymbolTreeViewCMD.Instance.start_follow_feature();
+            CureSymbolTreeViewCMD.Instance.run_follow_feature();
         }
     }
 
     /** 当修改过滤方式时，也需要取消现有高亮、然后执行一次聚焦 */
     public unhighlight_before_change_filter() {
         this.unhighlight(true);
-        CureSymbolTreeViewCMD.Instance.start_follow_feature();
+        CureSymbolTreeViewCMD.Instance.run_follow_feature();
     }
 
     /** 在 follow cursor 时，高亮 item，折叠其它的 item！
