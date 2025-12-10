@@ -105,8 +105,14 @@ export function init_all_context() {
     get_filters().forEach((v) => {
         update_switch_context(`filter-${v}`);
     });
-    update_follow_cursor_context(get_follow_cursor());
-    update_follow_viewport_context(get_follow_viewport());
+    if (get_follow_cursor()) {
+        update_follow_cursor_context(true);
+        CureSymbolTreeViewCMD.Instance.core_follow_cursor();
+    }
+    if (get_follow_viewport()) {
+        update_follow_viewport_context(true);
+        CureSymbolTreeViewCMD.Instance.core_follow_viewport();
+    }
 }
 
 /** 更新开关式命令的上下文，此类上下文命名格式：`cure-outline-is-xxx`
