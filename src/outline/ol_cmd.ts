@@ -398,12 +398,11 @@ export class CureSymbolTreeViewCMD {
     }
 
     /** 根据配置项调用一次 follow cursor 功能。返回是否开启了该功能 */
-    public start_follow_cursor() {
+    private start_follow_cursor() {
         const open = olstorage.get_follow_cursor();
         open && this.run_follow_cursor();
         return open;
     }
-
     //#endregion
 
     // #region 注册：follow viewport
@@ -477,11 +476,16 @@ export class CureSymbolTreeViewCMD {
     }
 
     /** 根据配置项调用一次 follow viewport 功能 */
-    public start_follow_viewport() {
+    private start_follow_viewport() {
         const open = olstorage.get_follow_viewport();
         open && this.run_follow_viewport();
         return open;
     }
 
     //#endregion
+
+    /** 根据 follow 功能是否开启，执行一次 follow cursor 和 follow viewport */
+    public start_follow_feature() {
+        !this.start_follow_cursor() && this.start_follow_viewport();
+    }
 }

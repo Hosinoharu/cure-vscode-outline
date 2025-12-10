@@ -485,7 +485,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
         this.sort_type = type;
         olstorage.set_sort_type(type);
-        CureSymbolTreeItemHandler.Instance.unhighlight_when_change_sort();
+        CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
         this.refresh();
 
         if (type !== "position") {
@@ -515,6 +515,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             for (const item of this.Items) {
                 item.reset_filted_children();
             }
+            CureSymbolTreeItemHandler.Instance.unhighlight_before_change_filter();
             this.refresh();
         }
     }
@@ -881,15 +882,16 @@ export class CureSymbolTreeItemHandler {
 
     /** 取消所有高亮。
      * @param [clean=false] 为 true 则仅仅是清空缓存的高亮的 item，而不是取消高亮。
-     * 因为在涉及到**刷新整个 TreeView 时**，只需要清空这个缓存即可，不再需要取消高亮。
+     *
+     * 因为在涉及到**刷新整个 TreeView 时**，只需要清空这个缓存即可，后续会刷新全部嘛。
      */
     public unhighlight(clean = false) {
         const { first, second } = this.highlighted;
         this.highlighted.first = undefined;
         this.highlighted.second = undefined;
+        first?.highlighten(false);
+        second?.highlighten(false);
         if (!clean) {
-            first?.highlighten(false);
-            second?.highlighten(false);
             first && this.provider.refresh(first);
             second && this.provider.refresh(second);
         }
@@ -899,16 +901,21 @@ export class CureSymbolTreeItemHandler {
      * - 排序方式不是 position，如果当前高亮了两个，需要全部取消，否则什么都不做咯。
      * - 排序方式是 position 时，触发一次 `follow` 操作（如果开启了功能的话）
      */
-    public unhighlight_when_change_sort() {
+    public unhighlight_before_change_sort() {
         const { first, second } = this.highlighted;
         if (this.provider.sort_type !== "position") {
             if (first && second) {
                 this.unhighlight();
             }
         } else {
-            !CureSymbolTreeViewCMD.Instance.start_follow_cursor() &&
-                CureSymbolTreeViewCMD.Instance.start_follow_cursor();
+            CureSymbolTreeViewCMD.Instance.start_follow_feature();
         }
+    }
+
+    /** 当修改过滤方式时，也需要取消现有高亮、然后执行一次聚焦 */
+    public unhighlight_before_change_filter() {
+        this.unhighlight(true);
+        CureSymbolTreeViewCMD.Instance.start_follow_feature();
     }
 
     /** 在 follow cursor 时，高亮 item，折叠其它的 item！

@@ -24,8 +24,7 @@ async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" |
     ol_item_handler.enable_follow_viewport(true);
     // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
     // 先触发 follow cursor，如果失败再触发 follow viewport
-    const cmder = CureSymbolTreeViewCMD.Instance;
-    !cmder.start_follow_cursor() && cmder.start_follow_viewport();
+    CureSymbolTreeViewCMD.Instance.start_follow_feature();
 }
 const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
 
