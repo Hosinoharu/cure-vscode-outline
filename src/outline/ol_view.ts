@@ -833,6 +833,7 @@ export class CureSymbolTreeItemHandler {
      * - 无法同时高亮多个元素？好像有配置项可以做到
      */
     public async expand_only_one(item: CureSymbolTreeItem) {
+        this.disable_follow_cursor();
         this.disable_follow_viewport();
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
@@ -841,6 +842,7 @@ export class CureSymbolTreeItemHandler {
         }
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
+        this.enable_follow_cursor();
         this.enable_follow_viewport();
     }
 
