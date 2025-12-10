@@ -490,6 +490,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             return;
         }
         this.sort_type = type;
+        olstorage.update_sort_context(type);
         CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
         this.refresh();
 

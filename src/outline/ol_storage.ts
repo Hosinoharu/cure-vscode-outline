@@ -111,7 +111,7 @@ export function update_switch_context(type: SwitchCmdType) {
  *
  * 将另外两个排序的上下文设置为 `false` 就可以不显示那两个了
  */
-function update_sort_context(type: OutlineSortType) {
+export function update_sort_context(type: OutlineSortType) {
     // 修改其它排序方式的上下文
     const sorts: OutlineSortType[] = ["position", "name", "kind"];
     sorts.forEach((v) => {
