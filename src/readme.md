@@ -33,7 +33,7 @@
 
 举例说明。
 
-```js
+```ts
 // 1. 有一个 `reload_symbol` 命令重新加载文档符号，因为插件内部也会调用该命令，所以提供了 `run_xxx` 方法
 public async run_reload_symbol();
 // 然后注册命令时，调用 `run_xxx` 方法
@@ -52,21 +52,20 @@ private _run_follow_viewport(editor: vscode.TextEditor);
 // 同时，插件其它地方也需要执行该功能，所以才有了这个 API
 private run_follow_viewport();
 // 然后该命令触发时会修改配置项，所以有了 core_xxx API
-// 在监听到配置项修改时，也会调用该 API，该 API 增加判断性代码避免重复调用！
+// 在初始化时，也会调用该 API 用于启动该功能
 public core_follow_viewport() {
     if (this.cancel_follow_viewport !== undefined) { return; }
     // 先在当前文档执行一次
     this.run_follow_viewport();
     // 然后监听文档变化，实时高亮 Tree Item
-    this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) =>
+    this.cancel_follow_viewport = vscode.windo.onDidChangeTextEditorVisibleRanges((e) =>
         this._run_follow_viewport(e.textEditor)
     );
 }
 // 那么注册的命令中只需要修改配置项了
  private register_follow_viewport() {
     return vscode.commands.registerCommand(this.cmd_follow_viewport, () => {
-        // ...
-        olstorage.toggle_follow_viewport(true);
+        // ... 这里修改配置项
         this.core_follow_viewport();
     });
 }
