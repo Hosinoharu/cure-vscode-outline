@@ -478,6 +478,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         if (this.sort_type === type) {
             return;
         }
+        this.sort_changed = true;
         this.sort_type = type;
         await CureStorage.Instance.set_sort_type(type);
         CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
