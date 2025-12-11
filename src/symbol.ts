@@ -5,7 +5,12 @@
  */
 
 import * as vscode from "vscode";
-import type { CureSymbolKind, SortableSymbol, TreeItemSymbol } from "./types/symbol";
+import type {
+    CureSymbolKind,
+    OutlineSortType,
+    SortableSymbol,
+    TreeItemSymbol,
+} from "./types/symbol";
 import crypto from "crypto";
 
 /** 表示一个文件的任意符号哟，包括语法符号、书签等 */
@@ -284,7 +289,9 @@ export class CureOneSymbol {
 
     // #endregion 获取符号的注释
 
-    //#region 符号的位置判断
+    //#region 符号的先后判断
+    // 很多时候需要判断符号的先后位置，通常是以【符号的位置】来判断
+    // 但当符号排序后，就需要使用特定的排序方式来判断先后位置了
 
     /** 判断当前符号是否包含另一个符号 */
     public contains(other: CureOneSymbol): boolean {
@@ -292,6 +299,8 @@ export class CureOneSymbol {
     }
 
     /** 判断当前符号是否在另一个符号之后。即下面这种情况：
+     *
+     * ## 按位置排序时
      * ```
      * other.start
      * other.end
@@ -300,11 +309,20 @@ export class CureOneSymbol {
      * my.end
      * ```
      */
-    public is_after(other: CureOneSymbol): boolean {
-        return this.range.start.isAfter(other.range.end);
+    public is_after(other: CureOneSymbol, type: OutlineSortType = "position"): boolean {
+        switch (type) {
+            case "kind":
+                return this.kind.localeCompare(other.kind) > 0;
+            case "name":
+                return this.name.localeCompare(other.name) > 0;
+            case "position":
+                return this.range.start.isAfter(other.range.end);
+        }
     }
 
     /** 判断当前符号是否在另一个符号之前。即下面这种情况：
+     *
+     * ## 按位置排序时
      * ```
      * my.start
      * my.end
@@ -313,14 +331,32 @@ export class CureOneSymbol {
      * other.end
      * ```
      */
-    public is_before(other: CureOneSymbol): boolean {
-        return this.range.end.isBefore(other.range.start);
+    public is_before(other: CureOneSymbol, type: OutlineSortType = "position"): boolean {
+        switch (type) {
+            case "kind":
+                return this.kind.localeCompare(other.kind) < 0;
+            case "name":
+                return this.name.localeCompare(other.name) < 0;
+            case "position":
+                return this.range.end.isBefore(other.range.start);
+        }
     }
 
     //#endregion
 
-    //#region 符号的排序的公共函数
+    //#region 符号的排序
     // 为了兼容很多类型，所以用了很多 @ts-ignore
+
+    static sort_by<T extends SortableSymbol>(type: OutlineSortType, s: T, recurse = false) {
+        switch (type) {
+            case "position":
+                return this.sort_by_position(s, recurse);
+            case "name":
+                return this.sort_by_name(s, recurse);
+            case "kind":
+                return this.sort_by_kind(s, recurse);
+        }
+    }
 
     /** 对符号进行按位置排序
      * ```
@@ -331,7 +367,7 @@ export class CureOneSymbol {
      * B.end
      * ```
      */
-    static sort_by_position<T extends SortableSymbol>(s: T, recurse = false) {
+    private static sort_by_position<T extends SortableSymbol>(s: T, recurse = false) {
         // @ts-ignore
         const has_symbol = s[0]?.symbol !== undefined;
         if (has_symbol) {
@@ -350,7 +386,7 @@ export class CureOneSymbol {
         return s;
     }
 
-    static sort_by_name<T extends SortableSymbol>(s: T, recurse = false) {
+    private static sort_by_name<T extends SortableSymbol>(s: T, recurse = false) {
         // @ts-ignore
         const has_symbol = s[0]?.symbol !== undefined;
         if (has_symbol) {
@@ -370,8 +406,8 @@ export class CureOneSymbol {
     }
 
     /** 按照符号的种类排序，同时内部按照名称排序哟 */
-    static sort_by_kind<T extends SortableSymbol>(s: T, recurse = false) {
-        // 每个 kind 下的 item 应该按名称排序，所以先按照名称排序
+    private static sort_by_kind<T extends SortableSymbol>(s: T, recurse = false) {
+        // 每个 kind 下的 item 应该按名称排序
         this.sort_by_name(s, recurse);
         // @ts-ignore
         const has_symbol = s[0]?.symbol !== undefined;

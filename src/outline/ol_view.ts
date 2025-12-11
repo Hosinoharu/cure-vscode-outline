@@ -17,7 +17,7 @@ import {
 import { set_context_value } from "../common";
 import { wait_for_follow_feature } from "../settings";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
-import * as olstorage from "./ol_storage";
+import { CureStorage } from "../storage";
 
 /** 表示符号 tree view 的 item */
 export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbol {
@@ -351,12 +351,12 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 管理符号 */
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
-    public sort_type: OutlineSortType = "position";
+    public sort_type: OutlineSortType = CureStorage.Instance.sort_type;
     /** 表示 item 的过滤类型 */
-    private filter_types: OutlineFilterType[] = olstorage.get_filters();
-    public set FilterTypes(value: OutlineFilterType[]) {
-        const old = this.filter_types;
-        this.filter_types = value;
+    private filter_type: OutlineFilterType[] = CureStorage.Instance.filter_type;
+    public set FilterType(value: OutlineFilterType[]) {
+        const old = this.filter_type;
+        this.filter_type = value;
         const changed = old.length !== value.length || old.some((v, i) => v !== value[i]);
         changed && this.refresh();
     }
@@ -377,7 +377,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     // #region 处理tree_item
 
     getTreeItem(element: CureSymbolTreeItem): vscode.TreeItem {
-        if (this.filter_types.length > 0) {
+        if (this.filter_type.length > 0) {
             element.filted_children = this.apply_filter(element.Children);
             // 子元素没有了，需要重新设置父元素的折叠状态
             // 必须在这里修改状态才行，在其它地方修改还得重新刷新 item
@@ -416,12 +416,12 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 返回 true 表示 element 满足过滤条件！ */
     private is_match_filter(element: CureSymbolTreeItem) {
-        return this.filter_types.some((v) => element.is_match_filter(v));
+        return this.filter_type.some((v) => element.is_match_filter(v));
     }
 
     /** 应用过滤条件 */
     private apply_filter(elements: CureSymbolTreeItem[]) {
-        return this.filter_types.length > 0
+        return this.filter_type.length > 0
             ? elements.filter((v) => !this.is_match_filter(v))
             : elements;
     }
@@ -440,18 +440,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 对 items 进行排序 */
     private apply_sort(items: CureSymbolTreeItem[]) {
-        switch (this.sort_type) {
-            case "name":
-                CureOneSymbol.sort_by_name(items);
-                break;
-            case "kind":
-                CureOneSymbol.sort_by_kind(items);
-                break;
-            default:
-                CureOneSymbol.sort_by_position(items);
-                break;
-        }
-        return items;
+        return CureOneSymbol.sort_by(this.sort_type, items);
     }
 
     //#endregion
@@ -485,12 +474,12 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     }
 
     /** 排序视图 */
-    sort_by(type: OutlineSortType) {
+    async sort_by(type: OutlineSortType) {
         if (this.sort_type === type) {
             return;
         }
         this.sort_type = type;
-        olstorage.update_sort_context(type);
+        await CureStorage.Instance.set_sort_type(type);
         CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
         this.refresh();
 
@@ -501,17 +490,17 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     /** 过滤符号。如果已经应用过了，则取消该过滤 */
     async filter_by(type: OutlineFilterType) {
-        const old = this.filter_types;
+        const old = this.filter_type;
 
         if (old.includes(type)) {
-            await olstorage.remove_filter(type);
+            await CureStorage.Instance.remove_filter(type);
         } else {
-            await olstorage.add_filter(type);
+            await CureStorage.Instance.add_filter(type);
         }
 
-        this.filter_types = olstorage.get_filters();
+        this.filter_type = CureStorage.Instance.filter_type;
 
-        if (old.length !== this.filter_types.length) {
+        if (old.length !== this.filter_type.length) {
             for (const item of this.Items) {
                 item.reset_filted_children();
             }
@@ -531,20 +520,14 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     // #endregion 定义事件处理函数
 
     /** 使用新的语法符号数据来更新语法树 */
-    private update_items(_new_symbols: CureOneSymbol[]) {
+    private update_items(new_symbols: CureOneSymbol[]) {
         // 如果顶层符号个数不同，没办法，需要全部替换了
-        if (_new_symbols.length !== this.Items.length) {
+        if (new_symbols.length !== this.Items.length) {
             // 因为已经解析好了数据，只要触发重新加载即可
             return this.reload();
         }
         // 个数相同？那就逐一替换内部的 symbol。注意，需要保证排序方式一致！
-        // _new_symbols 默认是按位置排序的，所以要根据当前排序方式进行调整
-        let new_symbols =
-            this.sort_type === "name"
-                ? CureOneSymbol.sort_by_name(_new_symbols)
-                : this.sort_type === "kind"
-                ? CureOneSymbol.sort_by_kind(_new_symbols)
-                : _new_symbols;
+        // 在获取符号时，就已经将它们排序好了哟
         for (let i = 0; i < new_symbols.length; i++) {
             const new_symbol = new_symbols[i];
             const item = this.Items[i];

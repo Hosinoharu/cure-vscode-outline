@@ -344,16 +344,6 @@ const configuration = {
                 enum: ["no-local-var", "no-global-var"],
             },
         },
-        "cure-outline.followCursor": {
-            type: "boolean",
-            default: false,
-            description: "Follow Cursor",
-        },
-        "cure-outline.followViewport": {
-            type: "boolean",
-            default: false,
-            description: "Follow Viewport",
-        },
     },
 };
 

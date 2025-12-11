@@ -8,7 +8,7 @@ import { CureSymbolTreeItem, CureSymbolTreeItemHandler, CureSymbolTreeProvider }
 import { debounce } from "../common";
 import { HighlightItems } from "../types/symbol";
 import { follow_cursor_interval, follow_viewport_interval } from "../settings";
-import * as olstorage from "./ol_storage";
+import { CureStorage } from "../storage";
 import { CureOneSymbol } from "../symbol";
 
 /** 关于 SymboolTreeView 视图的命令的实现与注册，需要传入控制的 tree view 哟 */
@@ -43,7 +43,6 @@ export class CureSymbolTreeViewCMD {
         view: vscode.TreeView<CureSymbolTreeItem>
     ) {
         const self = new CureSymbolTreeViewCMD(provider, view);
-        olstorage.init_all_context();
         const commands = [
             self.register_reload_symbol(),
 
@@ -76,7 +75,19 @@ export class CureSymbolTreeViewCMD {
             self.register_follow_viewport_off(),
         ];
         ctx.subscriptions.push(...commands);
+
+        self.init_feature();
         return self;
+    }
+
+    /** 根据一些配置项的开启与否，启用一些功能，比如 `follow` 功能之类的开启时需要监听事件嘛 */
+    private init_feature() {
+        if (CureStorage.Instance.follow_cursor) {
+            this.core_follow_cursor();
+        }
+        if (CureStorage.Instance.follow_viewport) {
+            this.core_follow_viewport();
+        }
     }
 
     // #region 注册：重新加载当前文件的符号
@@ -105,14 +116,14 @@ export class CureSymbolTreeViewCMD {
 
     private register_expand_all() {
         return vscode.commands.registerCommand(this.cmd_expand_all, () => {
-            olstorage.update_switch_context("expand-all");
+            CureStorage.Instance.update_switch_context("expand-all");
             this.item_handler.expand_all(true);
         });
     }
 
     private register_expand_all_off() {
         return vscode.commands.registerCommand(this.cmd_expand_all_off, () => {
-            olstorage.update_switch_context("expand-all-off");
+            CureStorage.Instance.update_switch_context("expand-all-off");
             this.item_handler.expand_all(false);
         });
     }
@@ -159,7 +170,7 @@ export class CureSymbolTreeViewCMD {
     /** 取消 sort_by_position 时（也就是切换排序方式且不为 position 时）需要执行一些操作 */
     public when_sort_by_position_off() {
         // 需要取消 follow viewport 哟
-        if (olstorage.get_follow_viewport()) {
+        if (CureStorage.Instance.follow_viewport) {
             this.execute_follow_viewport_off();
             return vscode.window.showInformationMessage(
                 "Follow Viewport disabled, because sort type is not 'by position'"
@@ -229,7 +240,7 @@ export class CureSymbolTreeViewCMD {
 
     /** 触发从配置项中更新 TreeView 的排序方式 */
     public update_filter_from_setting() {
-        this.provider.FilterTypes = olstorage.get_filters();
+        this.provider.FilterType = CureStorage.Instance.filter_type;
     }
 
     //#endregion
@@ -258,7 +269,7 @@ export class CureSymbolTreeViewCMD {
         // 因为 _items 是引用，如果直接对 _items 排序，那么排序后的结果会影响到原始的数据啦
         const items =
             this.provider.sort_type !== "position"
-                ? CureOneSymbol.sort_by_position([..._items])
+                ? CureOneSymbol.sort_by("position", [..._items])
                 : _items;
 
         // 因为 items 已经按位置排序了，所以可以二分查找，而不是遍历 —— 额，好像也没有多少提升
@@ -380,7 +391,7 @@ export class CureSymbolTreeViewCMD {
 
     /** 根据配置项在当前文档调用一次 follow cursor 功能。返回是否开启了该功能 */
     private run_follow_cursor() {
-        const open = olstorage.get_follow_cursor();
+        const open = CureStorage.Instance.follow_cursor;
         if (open) {
             this.item_handler.enable_follow_cursor(true);
             const editor = vscode.window.activeTextEditor;
@@ -401,7 +412,7 @@ export class CureSymbolTreeViewCMD {
 
     private register_follow_cursor() {
         return vscode.commands.registerCommand(this.cmd_follow_cursor, async () => {
-            await olstorage.toggle_follow_cursor(true);
+            await CureStorage.Instance.set_follow_cursor(true);
             this.core_follow_cursor();
         });
     }
@@ -416,7 +427,7 @@ export class CureSymbolTreeViewCMD {
 
     private register_follow_cursor_off() {
         return vscode.commands.registerCommand(this.cmd_follow_cursor_off, async () => {
-            await olstorage.toggle_follow_cursor(false);
+            await CureStorage.Instance.set_follow_cursor(false);
             this.core_follow_cursor_off();
         });
     }
@@ -463,7 +474,7 @@ export class CureSymbolTreeViewCMD {
 
     /** 根据配置项在当前文档调用一次 follow cursor 功能。返回是否开启了该功能 */
     private run_follow_viewport() {
-        const open = olstorage.get_follow_viewport();
+        const open = CureStorage.Instance.follow_viewport;
         if (open) {
             this.item_handler.enable_follow_viewport(true);
             const editor = vscode.window.activeTextEditor;
@@ -489,7 +500,7 @@ export class CureSymbolTreeViewCMD {
                     "Follow Viewport only works when sort type is 'by position'"
                 );
             }
-            await olstorage.toggle_follow_viewport(true);
+            await CureStorage.Instance.set_follow_viewport(true);
             this.core_follow_viewport();
         });
     }
@@ -504,7 +515,7 @@ export class CureSymbolTreeViewCMD {
 
     private register_follow_viewport_off() {
         return vscode.commands.registerCommand(this.cmd_follow_viewport_off, async () => {
-            await olstorage.toggle_follow_viewport(false);
+            await CureStorage.Instance.set_follow_viewport(false);
             this.core_follow_viewport_off();
         });
     }

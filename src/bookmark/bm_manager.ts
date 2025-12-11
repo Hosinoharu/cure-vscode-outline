@@ -236,7 +236,7 @@ class CureRegionParser {
 
     /** 获取解析结果 */
     get_result() {
-        CureOneSymbol.sort_by_position(this.for_bookmark);
+        CureOneSymbol.sort_by("position", this.for_bookmark);
         // 标记未匹配的 region
         while (true) {
             const r = this.region_stack.pop();

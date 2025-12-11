@@ -4,41 +4,50 @@ import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
 import { debounce, is_target_doc } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
-import { ol_storage_init } from "./ol_storage";
-
-export const ol_manager = CureSymbolManager.Instance;
-export const ol_provider = new CureSymbolTreeProvider(ol_manager);
-export const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
-    treeDataProvider: ol_provider,
-    // 自带的这个全部折叠不行，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
-    // showCollapseAll: true,
-});
-
-async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
-    console.log("update symbol when doc:", type, ". url:", doc.uri.toString().slice(0, 10));
-    await ol_provider.reload_symbol(doc);
-
-    // ==============================================================
-    // 符号加载完成之后，在这里恢复之前的状态
-    const ol_item_handler = CureSymbolTreeItemHandler.Instance;
-    ol_item_handler.enable_follow_cursor(true);
-    ol_item_handler.enable_follow_viewport(true);
-    // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
-    // 先触发 follow cursor，如果失败再触发 follow viewport
-    CureSymbolTreeViewCMD.Instance.run_follow_feature();
-}
-const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
 
 /** 在启动插件时，获取当前打开的文档并初始化 outline。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改
  * - 监听当前文档的切换，
  */
 export async function ol_init(ctx: vscode.ExtensionContext) {
+    //#region 初始化
+
+    const ol_manager = CureSymbolManager.Instance;
+    const ol_provider = new CureSymbolTreeProvider(ol_manager);
+    const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
+        treeDataProvider: ol_provider,
+        // 自带的这个全部折叠不行，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
+        // showCollapseAll: true,
+    });
+
     CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
     ctx.subscriptions.push(ol_view);
     ctx.subscriptions.push(CureSymbolTreeViewCMD.Instance);
     ctx.subscriptions.push(CureSymbolTreeItemHandler.Instance);
-    ol_storage_init(ctx);
+
+    //#endregion
+
+    //#region 更新函数
+
+    async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
+        console.log("update symbol when doc:", type, ". url:", doc.uri.toString().slice(0, 10));
+        await ol_provider.reload_symbol(doc);
+
+        // ==============================================================
+        // 符号加载完成之后，在这里恢复之前的状态
+        const ol_item_handler = CureSymbolTreeItemHandler.Instance;
+        ol_item_handler.enable_follow_cursor(true);
+        ol_item_handler.enable_follow_viewport(true);
+        // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
+        // 先触发 follow cursor，如果失败再触发 follow viewport
+        CureSymbolTreeViewCMD.Instance.run_follow_feature();
+    }
+
+    const debounced_update_symbol = debounce(update_symbol, watch_doc_change_interval);
+
+    //#endregion
+
+    //#region 事件监听
 
     const active_doc = vscode.window.activeTextEditor?.document;
     try {
@@ -90,9 +99,11 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
             } catch {}
         })
     );
-}
 
-/** 判断当前文档是否需要处理 */
-function should_handle(doc: vscode.TextDocument) {
-    return ol_view.visible && is_target_doc(doc);
+    //#endregion
+
+    /** 判断当前文档是否需要处理 */
+    function should_handle(doc: vscode.TextDocument) {
+        return ol_view.visible && is_target_doc(doc);
+    }
 }
