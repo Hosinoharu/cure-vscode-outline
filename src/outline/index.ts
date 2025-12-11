@@ -4,6 +4,7 @@ import { CureSymbolTreeProvider, CureSymbolTreeItemHandler } from "./ol_view";
 import { debounce, is_target_doc } from "../common";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { watch_doc_change_interval } from "../settings";
+import { CureTreeItemDecorationProvider } from "./ol_decoration";
 
 /** 在启动插件时，获取当前打开的文档并初始化 outline。同时注册各种事件从而更新符号树
  * - 监听当前文件的修改
@@ -19,11 +20,15 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
         // 不使用自带的这个全部折叠，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
         // showCollapseAll: true,
     });
+    const ol_deco_provider = vscode.window.registerFileDecorationProvider(
+        new CureTreeItemDecorationProvider()
+    );
 
     CureSymbolTreeViewCMD.register(ctx, ol_provider, ol_view);
     ctx.subscriptions.push(ol_view);
     ctx.subscriptions.push(CureSymbolTreeViewCMD.Instance);
     ctx.subscriptions.push(CureSymbolTreeItemHandler.Instance);
+    ctx.subscriptions.push(ol_deco_provider);
 
     //#endregion
 

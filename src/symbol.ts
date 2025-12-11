@@ -191,21 +191,24 @@ export class CureOneSymbol {
             return this.color;
         }
 
-        let colorId = "";
+        this.color = CureOneSymbol.get_color_from_kind(this.kind);
+        return this.color;
+    }
 
+    /** 根据符号种类、生成其 Color */
+    public static get_color_from_kind(kind: CureSymbolKind): vscode.ThemeColor {
+        let colorId = "";
         // 处理自定义的 symbol kind
-        if (this.kind === "CureRegion") {
+        if (kind === "CureRegion") {
             colorId = "symbolIcon.namespaceForeground";
-        } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
+        } else if (kind === "CureLineBookmark" || kind === "CureCustomBookmark") {
             colorId = "symbolIcon.namespaceForeground";
         } else {
             // 比如 `Function` 变为 `functionForeground`
-            const str = this.kind[0].toLowerCase() + this.kind.slice(1) + "Foreground";
+            const str = kind[0].toLowerCase() + kind.slice(1) + "Foreground";
             colorId = `symbolIcon-${str}`;
         }
-
-        this.color = new vscode.ThemeColor(colorId);
-        return this.color;
+        return new vscode.ThemeColor(colorId);
     }
 
     // #endregion 获取符号的图标

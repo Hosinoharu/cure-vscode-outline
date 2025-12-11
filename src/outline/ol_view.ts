@@ -18,6 +18,7 @@ import { set_context_value } from "../common";
 import { wait_for_follow_feature } from "../settings";
 import { CureSymbolTreeViewCMD } from "./ol_cmd";
 import { CureStorage } from "../storage";
+import { create_item_resource_uri } from "./ol_decoration";
 
 /** 表示符号 tree view 的 item */
 export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbol {
@@ -66,6 +67,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         item.command = CureSymbolCMD.Instance.create_locate(item, async () => {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
+        item.resourceUri = create_item_resource_uri(symbol.kind);
         item.description = item.get_desc(symbol);
         // item.tooltip 被延迟赋值了哟，仅在 hover 时触发，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
@@ -285,6 +287,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
             if (last_symbol.kind !== new_symbol.kind) {
                 this.iconPath = new_symbol.Icon;
                 this.description = new_symbol.kind;
+                this.resourceUri = create_item_resource_uri(new_symbol.kind);
             }
         }
 
