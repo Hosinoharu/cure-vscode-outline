@@ -31,7 +31,7 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
         console.log("update symbol when doc:", type, ". url:", doc.uri.toString().slice(0, 10));
-        await ol_provider.reload_symbol(doc);
+        await ol_provider.reload_symbol(doc, type === "switch");
 
         // ==============================================================
         // 符号加载完成之后，在这里恢复之前的状态

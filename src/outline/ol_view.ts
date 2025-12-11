@@ -510,22 +510,24 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
     }
 
-    /** 加载一个文档的符号 */
-    public async reload_symbol(doc: vscode.TextDocument) {
+    /** 加载一个文档的符号
+     * @param [switch_doc=false] 加载是否是因为切换了文档
+     */
+    public async reload_symbol(doc: vscode.TextDocument, switch_doc = false) {
         if (await this.manager.update_file(doc)) {
             this.sort_changed = false;
             const new_symbols = this.manager.Symbols;
-            this.update_items(new_symbols);
+            this.update_items(new_symbols, switch_doc);
         }
     }
 
     // #endregion 定义事件处理函数
 
     /** 使用新的语法符号数据来更新语法树 */
-    private update_items(new_symbols: CureOneSymbol[]) {
+    private update_items(new_symbols: CureOneSymbol[], switch_doc: boolean) {
+        // 如果是切换文档，则直接刷新全部数据
         // 如果顶层符号个数不同，没办法，需要全部替换了
-        if (new_symbols.length !== this.Items.length) {
-            // 因为已经解析好了数据，只要触发重新加载即可
+        if (switch_doc || new_symbols.length !== this.Items.length) {
             return this.reload();
         }
         // 个数相同？那就逐一替换内部的 symbol。注意，需要保证排序方式一致！
