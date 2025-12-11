@@ -466,7 +466,9 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         }
         try {
             this._onDidChangeTreeData.fire(item);
-        } catch {}
+        } catch (e: any) {
+            console.warn("TreeView Refresh Error:", e.message);
+        }
     }
 
     /** 重新加载数据，会重置现有符号树的折叠、高亮等状态 */
@@ -799,28 +801,20 @@ export class CureSymbolTreeItemHandler {
 
     //#region 折叠与展开一个item
 
-    /** 记录当前点击的 item。
-     *
-     * ## 说明为什么引入它
-     *
-     * 现在点击一个 item 时会自动展开和折叠，如果点击变成折叠，
-     *
-     * 且当前开启了 `follow cursor` 功能，就会触发元素高亮让元素重新展开！
-     *
-     * 所以在高亮元素时进行判断，如果高亮的是当前点击的 item 时，则不进行展开！
-     *
-     * 注意！实际上这个效果只会短暂生效：
-     * 1. 先点击 item 触发编辑器定位
-     * 2. 触发 follow cursor 高亮
-     * 3. 判断高亮的是否为当前点击的，是则不会展开它
-     * 4. 判断之后立即重置该项，避免后续影响
-     */
-    private curr_clicked_item: CureSymbolTreeItem | undefined;
-
     /** 展开一个 item，并且折叠同级别的 item。如果它已经展开，则折叠它 —— 该 API 仅用于【点击 item】时使用 */
     public async expand_only_one(item: CureSymbolTreeItem) {
-        this.curr_clicked_item = item;
         this.disable_follow_viewport();
+        // 点击 item 时，会因为展开/折叠而刷新一次，如果开启了 `follow cursor` 功能，
+        // 下一次高亮时又会刷新。所以会有两次刷新！故，在此处直接高亮它！同时更新高亮元素
+        if (CureStorage.Instance.follow_cursor) {
+            item.highlighten(true);
+            // 为什么要这样做？我也不是清楚，如果不这样做，那么在显示上会有问题，当前 item 不会高亮
+            // 也就是说：的的确确修改了状态、并且刷新了 item，但是看不到效果，
+            // 大概是异步队列的问题吧，因为刷新 item 时是异步的，又不能 await
+            setTimeout(() => {
+                this.update_highlight_when_click(item);
+            }, 0);
+        }
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
             this.unrecord_expaned_item(item);
         } else {
@@ -917,8 +911,7 @@ export class CureSymbolTreeItemHandler {
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
         // 向上展开 first 的父层级但不刷新 ui。
-        // 如果它是当前点击的元素，肯定已经展开了咯
-        if (!first.is_top && !this.curr_clicked_item?.equal(first)) {
+        if (!first.is_top) {
             let parent = first;
             while (parent) {
                 this.record_expaned_item(parent, false);
@@ -949,16 +942,27 @@ export class CureSymbolTreeItemHandler {
                 this.provider.refresh(refresh_item);
             }
         } else {
-            if (this.curr_clicked_item?.equal(first)) {
-                this.provider.refresh(first);
-            } else {
-                this.record_expaned_item(refresh_item);
-            }
-            this.curr_clicked_item = undefined;
+            this.record_expaned_item(refresh_item);
         }
         try {
             await this.view.reveal(second ?? first);
         } catch {}
+    }
+
+    /** 当点击 item 时，可以提前预知高亮的元素就是它 */
+    private update_highlight_when_click(item: CureSymbolTreeItem) {
+        const { first, second } = this.highlighted;
+        this.highlighted.first = undefined;
+        this.highlighted.second = undefined;
+        if (first && !first.equal(item)) {
+            first.highlighten(false);
+            this.provider.refresh(first);
+        }
+        if (second && !second.equal(item)) {
+            second.highlighten(false);
+            this.provider.refresh(second);
+        }
+        this.highlighted.first = item;
     }
 
     /** 返回 true 表示需要更新高亮元素了。传入的 `items` 一定具备 `first` 项啦 */
