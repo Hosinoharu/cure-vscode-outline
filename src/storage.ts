@@ -32,7 +32,6 @@ export class CureStorage {
 
         ctx.subscriptions.push(
             vscode.workspace.onDidChangeConfiguration((e) => {
-                // 修改过滤
                 if (e.affectsConfiguration(self.affect_filter_type)) {
                     CureSymbolTreeViewCMD.Instance.update_filter_from_setting();
                 }
@@ -42,9 +41,7 @@ export class CureStorage {
 
     /** 初始化所有命令的上下文哟 */
     private init_all_context() {
-        // 默认情况下不展开
         this.update_switch_context("expand-all-off");
-        this.update_switch_context("expand-only-one-off");
         this.update_sort_context(this.sort_type);
         this.filter_type.forEach((v) => {
             this.update_switch_context(`filter-${v}`);
@@ -82,12 +79,11 @@ export class CureStorage {
         // 修改其它排序方式的上下文
         const sorts: OutlineSortType[] = ["position", "name", "kind"];
         sorts.forEach((v) => {
-            if (v !== type) {
-                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, false);
-            } else {
-                // 别忘了把自己给设置
-                vscode.commands.executeCommand("setContext", `cure-outline-is-sort-by-${v}`, true);
-            }
+            vscode.commands.executeCommand(
+                "setContext",
+                `cure-outline-is-sort-by-${v}`,
+                v === type
+            );
         });
     }
 

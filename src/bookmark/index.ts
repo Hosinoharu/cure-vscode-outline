@@ -9,7 +9,7 @@ export const bm_view = vscode.window.createTreeView(CureBookmarkTreeProvider.id,
     treeDataProvider: bm_provider,
 });
 
-/** 现在逻辑上进行了调整，在解析语法符号的时候，会同时解析自定义符号，
+/** 在解析语法符号的时候，会同时解析自定义符号，
  *
  * 所以这里不需要再监听各种文档事件了，只需要注册命令就好。
  */

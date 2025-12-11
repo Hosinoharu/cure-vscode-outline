@@ -16,7 +16,7 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
     const ol_provider = new CureSymbolTreeProvider(ol_manager);
     const ol_view = vscode.window.createTreeView(CureSymbolTreeProvider.id, {
         treeDataProvider: ol_provider,
-        // 自带的这个全部折叠不行，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
+        // 不使用自带的这个全部折叠，会干扰【只展开当前一项】的功能，所以手动实现全部展开与折叠
         // showCollapseAll: true,
     });
 
@@ -38,8 +38,6 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
         const ol_item_handler = CureSymbolTreeItemHandler.Instance;
         ol_item_handler.enable_follow_cursor(true);
         ol_item_handler.enable_follow_viewport(true);
-        // 上面只是打开了开关，但还要根据是否开启功能从而调用一次哟
-        // 先触发 follow cursor，如果失败再触发 follow viewport
         CureSymbolTreeViewCMD.Instance.run_follow_feature();
     }
 

@@ -190,7 +190,7 @@ class OneRegionSymbol {
 
 /** 解析 region 注释。单例模式.
  *
- * # 用法说明
+ * ## 用法说明
  * - 先调用 `.reset(file)` 重置状态
  * - 然后不断调用 `parse_one_line(line)` 解析每一行
  * - 最后调用 `get_result()` 获取解析结果
@@ -225,6 +225,7 @@ class CureRegionParser {
 
     /** 重置状态
      * @param uri  文件路径，用于初始化符号用的
+     * @param languageId  文件的语言，用于判断其注释
      */
     public reset(uri: vscode.Uri, languageId: string) {
         this.for_outline = [];

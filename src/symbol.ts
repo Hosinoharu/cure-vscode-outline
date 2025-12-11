@@ -171,8 +171,6 @@ export class CureOneSymbol {
              * 否则，需要在原本大写的前面加上 - 符号。比如 `TypeParameter` 变为 `type-parameter`
              */
             const str = this.kind
-                // 第一个 ([A-Z][a-z]*) 表示匹配大写字母开头的单词
-                // 然后在它前面插入一个符号 -，所以最后输出的时候，需要去掉第一个符号嘛
                 .replace(/([A-Z][a-z]*)+?/g, "-$1")
                 .slice(1)
                 .toLowerCase();
@@ -201,7 +199,7 @@ export class CureOneSymbol {
         } else if (this.kind === "CureLineBookmark" || this.kind === "CureCustomBookmark") {
             colorId = "symbolIcon.namespaceForeground";
         } else {
-            /** 根据观察，将 kind 的第一个单词转为小写 + Foreground 即可。比如 `Function` 变为 `functionForeground`*/
+            // 比如 `Function` 变为 `functionForeground`
             const str = this.kind[0].toLowerCase() + this.kind.slice(1) + "Foreground";
             colorId = `symbolIcon-${str}`;
         }
@@ -246,14 +244,13 @@ export class CureOneSymbol {
         const comments = [curr_line_text];
         // 从符号的上一行开始咯，好像 python 中的文档注释可以写在下面？？算了，先不管了
         let curr_line = start_line - 1;
-        // 如果向上查看的第一行是块注释，则需要标记，直到找到块注释的起始位置为止
         const line = curr_doc.lineAt(curr_line).text.trim();
+        // 如果向上查看的第一行是块注释，则需要标记，直到找到块注释的起始位置为止
         const is_block_comment_end = CureCommentTable.is_block_comment_end(
             curr_doc.languageId.toLowerCase(),
             line
         );
 
-        // 开始向上不断查看注释内容
         while (curr_line >= 0) {
             const _line = curr_doc.lineAt(curr_line);
             // 如果不是在块注释区域，那么碰到空行直接结束了
@@ -471,7 +468,6 @@ export class CureSymbolCMD {
         return vscode.commands.registerCommand(
             this.cmd_locate,
             async (treeitem: { symbol: CureOneSymbol }, callback?: () => Promise<void>) => {
-                // 打开文档
                 try {
                     await callback?.();
                     const symbol = treeitem.symbol;

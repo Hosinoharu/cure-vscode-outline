@@ -48,9 +48,6 @@ export class CureSymbolManager {
 
     //#region 解析文件中原始的符号
 
-    /** 获取解析符号时，可能为空，因为解析服务还没有完成哟，所以需要重试 */
-    private retry_count = 0;
-
     private reset_state() {
         this.retry_count = 0;
         this.symbols = [];
@@ -76,6 +73,9 @@ export class CureSymbolManager {
         return ok;
     }
 
+    /** 获取解析符号时，可能为空，因为解析服务还没有完成哟，所以需要重试 */
+    private retry_count = 0;
+
     /** 更新文档中的符号列表 */
     private async update_symbols() {
         const self = this;
@@ -89,7 +89,7 @@ export class CureSymbolManager {
         // 要么文件解析不出符号，或者是解析服务还没有完成
         if (symbols === undefined && self.retry_count < retry_max) {
             self.retry_count++;
-            // 确保解析完成
+
             return await new Promise<void>((resolve) => {
                 setTimeout(async () => {
                     resolve(await self.update_symbols());
@@ -141,9 +141,7 @@ export class CureSymbolManager {
         /** 记录当前处理的 region 符号索引 */
         let i_r = 0;
         while (i_s < symbols.length && i_r < regions.length) {
-            /** 记录当前处理的符号 */
             const curr_symbol = symbols[i_s];
-            /** 记录当前的 region 符号 */
             const curr_region = regions[i_r];
 
             // s 在 region 内部，需要判断 region 中子 region 和 s 的位置关系

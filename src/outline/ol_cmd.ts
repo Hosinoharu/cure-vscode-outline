@@ -46,7 +46,6 @@ export class CureSymbolTreeViewCMD {
         const commands = [
             self.register_reload_symbol(),
 
-            // 开关类命令的注册
             self.register_expand_all(),
             self.register_expand_all_off(),
 
@@ -169,7 +168,6 @@ export class CureSymbolTreeViewCMD {
 
     /** 取消 sort_by_position 时（也就是切换排序方式且不为 position 时）需要执行一些操作 */
     public when_sort_by_position_off() {
-        // 需要取消 follow viewport 哟
         if (CureStorage.Instance.follow_viewport) {
             this.execute_follow_viewport_off();
             return vscode.window.showInformationMessage(
@@ -272,7 +270,7 @@ export class CureSymbolTreeViewCMD {
                 ? CureOneSymbol.sort_by("position", [..._items])
                 : _items;
 
-        // 因为 items 已经按位置排序了，所以可以二分查找，而不是遍历 —— 额，好像也没有多少提升
+        // 下面根据位置进行二分查找
         let i_start = 0;
         let i_end = items.length - 1;
 
@@ -281,7 +279,7 @@ export class CureSymbolTreeViewCMD {
         /** 向下看，最靠近的 item */
         let down_closer_item: CureSymbolTreeItem = items[i_end];
 
-        // 比第一个符号还靠前、比最后一个符号还靠后，那就不展示了
+        // 所在位置超出范围，形如 [range ...up ..down] 或者 [up...down...range]
         if (up_closer_item.is_after(range) || down_closer_item.is_before(range)) {
             // 现在调整了查询范围，找子元素了
             // 如当前高亮 A、B，然后进入到 B 对象中，从里面找子项，结果没找到
@@ -294,9 +292,9 @@ export class CureSymbolTreeViewCMD {
             const i_mid = Math.floor((i_start + i_end) / 2);
             const item = items[i_mid];
             // console.log("mid item:", item.name);
-            // 这说明在 item 的内部
+
             if (item.contains(range, false)) {
-                // 继续向下查看是在哪个子元素中
+                // 递归处理子元素
                 return this._get_closer_item(item, range);
             }
             // 形如 [up...item...range.....down]，更新 up
@@ -351,7 +349,6 @@ export class CureSymbolTreeViewCMD {
      * @param title 用于调试时标记
      */
     private highlight_items(closer_item: HighlightItems<CureSymbolTreeItem>, title: string) {
-        // 至少有一个，同时需要更新才能继续
         if (!closer_item.first) {
             return this.item_handler.unhighlight();
         }
@@ -372,7 +369,7 @@ export class CureSymbolTreeViewCMD {
                 this.item_handler.highlight(first, second);
             } else {
                 this.item_handler.unhighlight();
-                console.log("unhighlight cause sort type is not by position");
+                console.log("unhighlight because sort type is not by position");
             }
         } else {
             console.log(title, ":", first.name);
@@ -486,7 +483,6 @@ export class CureSymbolTreeViewCMD {
     public core_follow_viewport() {
         if (this.cancel_follow_viewport === undefined) {
             this.run_follow_viewport();
-            // 监听编辑器滚动，注意，当【点击符号】跳转时，也会触发滚动事件 —— 此时需要忽略啦
             this.cancel_follow_viewport = vscode.window.onDidChangeTextEditorVisibleRanges((e) =>
                 this._run_follow_viewport(e.textEditor)
             );

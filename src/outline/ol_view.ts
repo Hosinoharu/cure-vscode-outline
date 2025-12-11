@@ -66,7 +66,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         item.command = CureSymbolCMD.Instance.create_locate(item, async () => {
             await CureSymbolTreeItemHandler.Instance.expand_only_one(item);
         });
-        // 显示它有多少个子元素咯
         item.description = item.get_desc(symbol);
         // item.tooltip 被延迟赋值了哟，仅在 hover 时触发，在 provider.resolveTreeItem API 中
         set_context_value(item, "symbol");
@@ -135,7 +134,6 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
         // 有 children 还设置为 None？？可能是过滤的情况
         if (state === vscode.TreeItemCollapsibleState.None && this.children_length !== 0) {
             const is_filter = this.filted_children && this.filted_children.length !== 0;
-            // 有过滤后的 children，肯定不会设置为 None
             if (is_filter) {
                 return false;
             }
@@ -290,7 +288,7 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
             }
         }
 
-        // 更新子节点，注意：如果子节点需要刷新，则本节点也需要刷新
+        // 更新子节点
         const collpased = this.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed;
         const expanded = this.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
         const children_changed = this.symbol.children.length !== new_symbol.children.length;
@@ -417,7 +415,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         element: CureSymbolTreeItem,
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.TreeItem> {
-        // 因为获取符号上面的注释会增加消耗，且不是所有符号都会被查看 tooltips
+        // 因为获取符号上面的注释会增加消耗，且不是所有符号都会被查看 tooltip
         // 所以将其的获取放到这里，而不是在创建 item 的时候
         item.tooltip = element.Tooltip;
         return item;
@@ -525,15 +523,15 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     // #endregion 定义事件处理函数
 
-    /** 使用新的语法符号数据来更新语法树 */
+    /** 使用新的语法符号数据来更新语法树
+     * @param new_symbols 新的语法符号数据，其必须是已经按照到当前的排序处理过的
+     * @param switch_doc 是否是因为切换了文档才需要更新
+     */
     private update_items(new_symbols: CureOneSymbol[], switch_doc: boolean) {
-        // 如果是切换文档，则直接刷新全部数据
-        // 如果顶层符号个数不同，没办法，需要全部替换了
         if (switch_doc || new_symbols.length !== this.Items.length) {
             return this.reload();
         }
-        // 个数相同？那就逐一替换内部的 symbol。注意，需要保证排序方式一致！
-        // 在获取符号时，就已经将它们排序好了哟
+        // 注意，需要保证排序方式一致！
         for (let i = 0; i < new_symbols.length; i++) {
             const new_symbol = new_symbols[i];
             const item = this.Items[i];
@@ -690,21 +688,7 @@ export class CureSymbolTreeItemHandler {
 
     //#region 展开与折叠的优化
 
-    /** 优化功能【只展开一个 item】，其策略如下所述。
-     *
-     * # 关于非顶层节点的展开
-     * 1. 当展开 A 时，记录它的 `parentId`，说明对应的 `parent item` 下面有一个展开项了
-     * 2. 当展开 B 时，如果 B 的 `parentId` 已经存在（比如就等于 A 的 `parentId`），
-     *    则说明有同层级的节点需要折叠，则获取 A
-     * 3. 找 A 下面又展开了哪些子节点，这可以根据 A 的 id 来读取，
-     *    依次将子项折叠（但不刷新 ui），递归循环
-     * 4. 折叠 A 并刷新 A，从而刷新 ui
-     * 5. 最后展开 B
-     *
-     * # 关于顶层节点的展开
-     * 1. 当展开 A 时，如果它是顶层节点，则记录到成员 `last_expand_top_item`
-     * 2. 当展开 B 时，如果它也是顶层节点，则折叠 `last_expand_top_item` 并刷新
-     */
+    /** 记录已经展开的 items，从而实现【只展开一个】的功能。具体见 `dev_doc.md` 文档 */
     private readonly expaned_items: Map<string, CureSymbolTreeItem> = new Map();
     /** 因为点击 item 时，默认只能展开一个，所以它记录上一次展开的顶层节点。
      * 由于异步事件时会频繁触发，所以使用**队列**来模拟。
@@ -798,13 +782,10 @@ export class CureSymbolTreeItemHandler {
         return changed;
     }
 
-    /** 修改 item 的折叠状态，同时承担刷新 ui 的职责
+    /** 修改 item 的折叠状态
      * @param refhresh 为 true 则立即刷新，否则需要手续手动刷新
      */
     private set_expand_state(item: CureSymbolTreeItem, expand: boolean, refresh: boolean) {
-        // 如果这里使用 item.xx === None 然后直接返回，那么将不会刷新 ui
-        // 假如当前 item 修改了高亮元素，结果因为它无法折叠，所以不会刷新 ui
-        // 所以！本函数一定要尝试刷新 ui 才行
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
@@ -833,13 +814,7 @@ export class CureSymbolTreeItemHandler {
      */
     private curr_clicked_item: CureSymbolTreeItem | undefined;
 
-    /** 展开一个 item，并且折叠同级别的 item。如果它已经展开，则折叠它 —— 该 API 仅用于【点击 item】时使用！
-     *
-     * 其问题如下，均由于 `view.reveal API` 的限制：
-     * - 不能让元素居中（指的是在 tree view 垂直居中）
-     * - 如果强制居中会丢失其它地方焦点，比如编辑文档时丢失光标 —— 当然点击 item 时就不会这么突兀
-     * - 无法同时高亮多个元素？好像有配置项可以做到
-     */
+    /** 展开一个 item，并且折叠同级别的 item。如果它已经展开，则折叠它 —— 该 API 仅用于【点击 item】时使用 */
     public async expand_only_one(item: CureSymbolTreeItem) {
         this.curr_clicked_item = item;
         this.disable_follow_viewport();
@@ -879,19 +854,12 @@ export class CureSymbolTreeItemHandler {
 
     /** 取消之前的高亮并高亮当前 item，最多两个 item 并且一定不相同 */
     private _highlight(first: CureSymbolTreeItem, second?: CureSymbolTreeItem) {
-        // 外部保证 first 和 second 是相同层级的
         const last_first = this.highlighted.first;
         this.highlighted.first = first;
         const last_second = this.highlighted.second;
         this.highlighted.second = second;
-
-        // 高亮成功，说明 first 是新加入的
-        if (first.highlighten(true)) {
-        }
-        // 高亮成功，说明 second 是新加入的
-        if (second?.highlighten(true)) {
-        }
-
+        first.highlighten(true);
+        second?.highlighten(true);
         last_first && this._unhighlight(last_first, first, second);
         last_second && this._unhighlight(last_second, first, second);
     }
@@ -945,7 +913,7 @@ export class CureSymbolTreeItemHandler {
 
         /** 记录最后应该刷新的顶层 item */
         let refresh_item = first;
-        // 向上展开 first 的父层级但不刷新 ui。 如果 first 位于顶层，根本不需要向上展开咯
+        // 向上展开 first 的父层级但不刷新 ui。
         // 如果它是当前点击的元素，肯定已经展开了咯
         if (!first.is_top && !this.curr_clicked_item?.equal(first)) {
             let parent = first;
@@ -1022,7 +990,6 @@ export class CureSymbolTreeItemHandler {
         if (!first && !second) {
             return true;
         }
-        // 只有一个高亮，看看是否在它的范围内
         if (!second) {
             if (first?.contains(range, true)) {
                 // 匿名函数无法准确判断是否在范其名称范围内 —— 因为它都不具备名称
