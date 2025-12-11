@@ -463,7 +463,9 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             // console.log("refresh item:", item.name);
             item.should_refresh = false;
         }
-        this._onDidChangeTreeData.fire(item);
+        try {
+            this._onDidChangeTreeData.fire(item);
+        } catch {}
     }
 
     /** 重新加载数据，会重置现有符号树的折叠、高亮等状态 */
