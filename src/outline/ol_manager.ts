@@ -96,7 +96,13 @@ export class CureSymbolManager {
                 }, retry_interval);
             });
         } else {
-            // 为了保证后续对比时，符号的顺序一致，所以需要按当前排序方式进行排序
+            /** 警告！因为是通过执行 vscode command 来获取符号的，不要认为符号默认以位置排序！
+             * 因为它受到 vscode 自带的 outline 的配置项影响！
+             *
+             * 也就是说，如果 vscode 的 outline 配置项是按照名称排序的，那么获取的符号树也是按照名称排序的！
+             *
+             * 为了保证后续对比时，符号的顺序一致，所以需要按当前排序方式进行排序
+             */
             self.symbols = symbols
                 ? CureOneSymbol.sort_by(CureStorage.Instance.sort_type, symbols, true)
                 : [];

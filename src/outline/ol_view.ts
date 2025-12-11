@@ -352,6 +352,16 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
     public sort_type: OutlineSortType = CureStorage.Instance.sort_type;
+    /** 表示修改了排序方式，获取 TreeItem 时应该进行排序
+     *
+     * ## 为什么引入这个成员？
+     * 这是为了尽可能减少排序的次数：
+     * 1. `ol_manager` 提供的符号是**按照当前保存的排序方式**处理过了的
+     * 2. 在 `ol_view` 中，如果排序方式没有变化，获取 TreeItem 时则不需要重新排序
+     * 3. 当修改排序方式时，标记本成员为 true，表示获取 TreeItem 时应该进行排序 —— 因为现在使用的还是原来的数据嘛
+     * 4. 当下一次从 `ol_manager` 获取新的符号时，将本成员设置为 false，因为现在得到的数据已经排好序了
+     */
+    private sort_changed = false;
     /** 表示 item 的过滤类型 */
     private filter_type: OutlineFilterType[] = CureStorage.Instance.filter_type;
     public set FilterType(value: OutlineFilterType[]) {
@@ -365,6 +375,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 语法符号树信息 */
     public get Items(): CureSymbolTreeItem[] {
         if (this.items === undefined) {
+            this.sort_changed = false;
             this.items = this.manager.Symbols.map(CureSymbolTreeItem.create_item);
         }
         return this.items;
@@ -428,22 +439,11 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     //#endregion 过滤
 
-    //#region 排序
-
-    /** 警告！因为是通过执行 vscode command 来获取符号的，不要认为符号默认以位置排序！
-     * 因为它受到 vscode 自带的 outline 的配置项影响！
-     *
-     * 也就是说，如果 vscode 的 outline 配置项是按照名称排序的，那么获取的符号树也是按照名称排序的！
-     */
-
-    /** 下面排序的实现中不需要处理子元素，会在 `getChildren` 中处理啦 */
-
     /** 对 items 进行排序 */
     private apply_sort(items: CureSymbolTreeItem[]) {
-        return CureOneSymbol.sort_by(this.sort_type, items);
+        // 不需要递归处理子元素，会在 `getChildren` 中处理啦
+        return this.sort_changed ? CureOneSymbol.sort_by(this.sort_type, items) : items;
     }
-
-    //#endregion
 
     // #endregion 处理tree_item
 
@@ -512,6 +512,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 加载一个文档的符号 */
     public async reload_symbol(doc: vscode.TextDocument) {
         if (await this.manager.update_file(doc)) {
+            this.sort_changed = false;
             const new_symbols = this.manager.Symbols;
             this.update_items(new_symbols);
         }
