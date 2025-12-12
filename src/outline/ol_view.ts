@@ -598,17 +598,13 @@ export class CureSymbolTreeItemHandler {
         self.disposables.push(
             view.onDidExpandElement((e) => {
                 // console.log("expand:", e.element.name);
-                if (CureStorage.Instance.editor_auto_expand) {
-                    self.fold_editor_by_item(e.element, true);
-                }
+                self.fold_editor_by_item(e.element, true);
             })
         );
         self.disposables.push(
             view.onDidCollapseElement((e) => {
                 // console.log("collapse:", e.element.name);
-                if (CureStorage.Instance.editor_auto_expand) {
-                    self.fold_editor_by_item(e.element, false);
-                }
+                self.fold_editor_by_item(e.element, false);
             })
         );
 
@@ -819,12 +815,14 @@ export class CureSymbolTreeItemHandler {
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
-        if (refresh || item.is_top) {
-            // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
-            // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
-            this.fold_editor_by_item(item, expand);
-        }
-        refresh && this.provider.refresh(item);
+        // 这里可能发生重复折叠，但是代码简单
+        // 很多时候，并不会刷新子 item，而是直接刷新父 item
+        // 如果每个地方都调用该 API 有点麻烦，放在这里就非常棒了
+        // 就是会出现重复调用咯，当前就这样吧
+        // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
+        // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
+        this.fold_editor_by_item(item, expand);
+        this.provider.refresh(item);
     }
 
     //#endregion
@@ -1187,9 +1185,7 @@ export class CureSymbolTreeItemHandler {
         const expand = level < this.curr_level;
         items.forEach((v) => {
             this.set_expand_state(v, expand, false);
-            if (CureStorage.Instance.editor_auto_expand) {
-                this.fold_editor_by_item(v, expand, 1);
-            }
+            this.fold_editor_by_item(v, expand, 1);
             if (v.children_length > 0) {
                 this.set_items_level_expand(v.Children, level + 1);
             }
