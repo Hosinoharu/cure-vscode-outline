@@ -45,7 +45,7 @@ export class CureBookmarkManager {
             case "bookmark":
                 return "普通书签";
             case "custom":
-                return "文本中的书签";
+                return "当前文件的自定义书签";
             default:
                 return `未知分类: ${category}`;
         }
