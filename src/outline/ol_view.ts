@@ -1191,6 +1191,9 @@ export class CureSymbolTreeItemHandler {
         const expand = level < this.curr_level;
         items.forEach((v) => {
             this.set_expand_state(v, expand, false);
+            if (CureStorage.Instance.editor_auto_expand) {
+                this.fold_editor_by_item(v, expand, 1);
+            }
             if (v.children_length > 0) {
                 this.set_items_level_expand(v.Children, level + 1);
             }
