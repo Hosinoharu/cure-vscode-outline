@@ -876,11 +876,8 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 指定一个 item，折叠它所在的范围！
-     * @param level 指定展开或折叠的层级，默认情况下：
-     * - 展开时，只展开 1 层
-     * - 折叠时，折叠 3 层
-     */
-    private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, level?: number) {
+     * @param levels 指定展开或折叠的层级，默认情况为 3*/
+    private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, levels = 3) {
         if (!CureStorage.Instance.editor_auto_expand || !this.is_editor_auto_expand_ok) {
             return;
         }
@@ -899,7 +896,6 @@ export class CureSymbolTreeItemHandler {
 
         console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
         const action = expand ? "editor.unfold" : "editor.fold";
-        const levels = level || (expand ? 1 : 3);
         this.disable_follow_viewport();
         vscode.commands.executeCommand(action, {
             levels,
