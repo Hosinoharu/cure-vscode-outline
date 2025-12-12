@@ -595,12 +595,22 @@ export class CureSymbolTreeItemHandler {
         // 也就是说 collapsibleState 只能确定【初次渲染】时折叠的状态
         //
         // ！！！不能在这里修改 item.collapsibleState 值，否则完全无法精确控制！
-        // view.onDidExpandElement((e) => {
-        //     console.log("expand:", e.element.name);
-        // });
-        // view.onDidCollapseElement((e) => {
-        //     console.log("collapse:", e.element.name);
-        // });
+        self.disposables.push(
+            view.onDidExpandElement((e) => {
+                // console.log("expand:", e.element.name);
+                if (CureStorage.Instance.editor_auto_expand) {
+                    self.fold_editor_by_item(e.element, true);
+                }
+            })
+        );
+        self.disposables.push(
+            view.onDidCollapseElement((e) => {
+                // console.log("collapse:", e.element.name);
+                if (CureStorage.Instance.editor_auto_expand) {
+                    self.fold_editor_by_item(e.element, false);
+                }
+            })
+        );
 
         // 当点击 item 时会触发，似乎可以替代【点击 item 时的事件】
         // 但重复点击时当然是不会重复触发的啦！
