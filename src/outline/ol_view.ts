@@ -802,12 +802,12 @@ export class CureSymbolTreeItemHandler {
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
-        if (refresh) {
+        if (refresh || item.is_top) {
             // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
             // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
             this.fold_editor_by_item(item, expand);
-            this.provider.refresh(item);
         }
+        refresh && this.provider.refresh(item);
     }
 
     //#endregion
@@ -835,13 +835,36 @@ export class CureSymbolTreeItemHandler {
         this.enable_follow_viewport();
     }
 
+    /** 记录当前是否可以进行 Editor Follow Expand
+     *
+     * ## 为什么引入它
+     * 在开启 `follow viewport` 与 `editor follow expand` 后，
+     *
+     * 当触发滚动时，说明是想要浏览代码，而不是让它自动折叠！所以需要临时取消 `editor follow expand` 功能，
+     * 而且如果不临时取消的话，自动折叠编辑区的代码块又会改变滚动条的位置，导致频繁触发 Follow Viewpot
+     */
+    private is_editor_auto_expand_ok = true;
+    private eae_id: number | undefined;
+    /** 临时取消 editor follow expand */
+    public disable_editor_follow_expand() {
+        this.is_editor_auto_expand_ok = false;
+        clearTimeout(this.eae_id);
+    }
+
+    /** 重新启用 editor follow expand */
+    public enable_editor_follow_expand() {
+        this.eae_id = setTimeout(() => {
+            this.is_editor_auto_expand_ok = true;
+        }, wait_for_follow_feature) as any;
+    }
+
     /** 指定一个 item，折叠它所在的范围！
      * @param level 指定展开或折叠的层级，默认情况下：
      * - 展开时，只展开 1 层
      * - 折叠时，折叠 3 层
      */
     private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, level?: number) {
-        if (!CureStorage.Instance.editor_auto_expand) {
+        if (!CureStorage.Instance.editor_auto_expand || !this.is_editor_auto_expand_ok) {
             return;
         }
 
@@ -860,10 +883,12 @@ export class CureSymbolTreeItemHandler {
         console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
         const action = expand ? "editor.unfold" : "editor.fold";
         const levels = level || (expand ? 1 : 3);
+        this.disable_follow_viewport();
         vscode.commands.executeCommand(action, {
             levels,
             selectionLines: [start],
         });
+        this.enable_follow_viewport();
     }
 
     /** 折叠或展开编辑器的全部 */

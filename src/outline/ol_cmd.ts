@@ -464,7 +464,9 @@ export class CureSymbolTreeViewCMD {
         if (this.item_handler.is_highlight_range_changed(range)) {
             const search_items = this.item_handler.get_search_items(range);
             const closer_item = this.get_closer_item(search_items, range);
+            this.item_handler.disable_editor_follow_expand();
             this.highlight_items(closer_item, "follow_viewport");
+            this.item_handler.enable_editor_follow_expand();
         }
     }
 
@@ -511,6 +513,9 @@ export class CureSymbolTreeViewCMD {
                     "Follow Viewport only works when sort type is 'by position'"
                 );
             }
+            if (CureStorage.Instance.editor_auto_expand) {
+                this.show_msg_when_follow_viewport_on();
+            }
             await CureStorage.Instance.set_follow_viewport(true);
             this.core_follow_viewport();
         });
@@ -549,6 +554,9 @@ export class CureSymbolTreeViewCMD {
 
     private register_editor_auto_expand() {
         return vscode.commands.registerCommand(this.cmd_editor_auto_expand, async () => {
+            if (CureStorage.Instance.follow_viewport) {
+                this.show_msg_when_follow_viewport_on();
+            }
             await CureStorage.Instance.set_editor_auto_expand(true);
         });
     }
@@ -557,6 +565,13 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_editor_auto_expand_off, async () => {
             await CureStorage.Instance.set_editor_auto_expand(false);
         });
+    }
+
+    /** 提示：当滚动的时候将暂时禁用 Editor Follow Expand */
+    private show_msg_when_follow_viewport_on() {
+        vscode.window.showInformationMessage(
+            "Follow Viewport is on, Editor Follow Expand will be disabled temporarily when scrolling"
+        );
     }
 
     //#endregion
