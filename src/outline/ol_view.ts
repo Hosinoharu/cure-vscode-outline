@@ -254,6 +254,8 @@ export class CureSymbolTreeItem extends vscode.TreeItem implements TreeItemSymbo
                 return !is_global && is_var;
             case "no-global-var":
                 return is_global && is_var;
+            case "no-property":
+                return kind === "Property";
             default:
                 return false;
         }
@@ -499,12 +501,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 过滤符号。如果已经应用过了，则取消该过滤 */
     async filter_by(type: OutlineFilterType) {
         const old = this.filter_type;
-
-        if (old.includes(type)) {
-            await CureStorage.Instance.remove_filter(type);
-        } else {
-            await CureStorage.Instance.add_filter(type);
-        }
+        await CureStorage.Instance.add_filter(type);
 
         if (old.length !== this.filter_type.length) {
             for (const item of this.Items) {
@@ -512,6 +509,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             }
             CureSymbolTreeItemHandler.Instance.unhighlight_before_change_filter();
             this.refresh();
+            CureStorage.Instance.update_switch_context("expand-all-off");
         }
     }
 

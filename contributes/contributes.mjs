@@ -273,12 +273,37 @@ const filter = (() => {
             group: "2_filter@2",
         },
     };
+    const filter_no_propety = {
+        cmd: {
+            command: "cure-outline.filter-no-property",
+            title: "No Property",
+        },
+        menu: {
+            command: "cure-outline.filter-no-property",
+            when: "view == cure-outline && !cure-outline-is-filter-no-property",
+            group: "2_filter@3",
+        },
+    };
+    const filter_no_property_off = {
+        cmd: {
+            command: "cure-outline.filter-no-property-off",
+            title: "✔ No Property",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.filter-no-property-off",
+            when: "view == cure-outline && cure-outline-is-filter-no-property",
+            group: "2_filter@3",
+        },
+    };
 
     return create_result([
         filter_no_local_var,
         filter_no_local_var_off,
         filter_no_global_var,
         filter_no_global_var_off,
+        filter_no_propety,
+        filter_no_property_off,
     ]);
 })();
 
@@ -365,7 +390,7 @@ const configuration = {
             description: "Filter Type",
             items: {
                 type: "string",
-                enum: ["no-local-var", "no-global-var"],
+                enum: ["no-local-var", "no-global-var", "no-property"],
             },
         },
     },

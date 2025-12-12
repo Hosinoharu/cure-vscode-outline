@@ -39,8 +39,9 @@ type OutlineSortType = "name" | "position" | "kind";
 /** 过滤符号时的种类
  * - `no_local_var`：过滤掉局部变量
  * - `no_global_var`：过滤掉全局变量
+ * - `no_property`：过滤掉属性
  */
-type OutlineFilterType = "no-local-var" | "no-global-var";
+type OutlineFilterType = "no-local-var" | "no-global-var" | "no-property";
 
 interface TreeItemSymbol {
     symbol: CureOneSymbol;

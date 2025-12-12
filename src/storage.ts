@@ -131,29 +131,16 @@ export class CureStorage {
 
     private readonly affect_filter_type = this.setting_domaim + ".filterType";
 
-    /** 添加一个过滤条件，如果该条件已经存在，则什么都不做 */
+    /** 添加一个过滤条件，如果该条件已经存在，则删除 */
     async add_filter(type: OutlineFilterType) {
         const filters = this.filter_type;
-        if (!filters.includes(type)) {
-            filters.push(type);
-            this.update_switch_context(`filter-${type}`);
-            await vscode.workspace
-                .getConfiguration(this.setting_domaim)
-                .update("filterType", filters, true);
-        }
-    }
-
-    /** 移除一个过滤条件，如果该条件不存在，则什么都不做 */
-    async remove_filter(type: OutlineFilterType) {
-        const filters = this.filter_type;
         const index = filters.indexOf(type);
-        if (index > -1) {
-            filters.splice(index, 1);
-            this.update_switch_context(`filter-${type}-off`);
-            await vscode.workspace
-                .getConfiguration(this.setting_domaim)
-                .update("filterType", filters, true);
-        }
+        const v = `filter-${type}` + (index < 0 ? "" : "-off");
+        index < 0 ? filters.push(type) : filters.splice(index, 1);
+        this.update_switch_context(v as SwitchCmdType);
+        await vscode.workspace
+            .getConfiguration(this.setting_domaim)
+            .update("filterType", filters, true);
     }
 
     public get filter_type() {

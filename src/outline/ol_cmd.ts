@@ -54,25 +54,22 @@ export class CureSymbolTreeViewCMD {
 
             self.register_sort_by_position(),
             self.register_sort_by_position_off(),
-
             self.register_sort_by_name(),
             self.register_sort_by_name_off(),
-
             self.register_sort_by_kind(),
             self.register_sort_by_kind_off(),
 
             self.register_filter_no_local_var(),
             self.register_filter_no_local_var_off(),
-
             self.register_filter_no_global_var(),
             self.register_filter_no_global_var_off(),
+            self.register_filter_no_property(),
+            self.register_filter_no_property_off(),
 
             self.register_follow_cursor(),
             self.register_follow_cursor_off(),
-
             self.register_follow_viewport(),
             self.register_follow_viewport_off(),
-
             self.register_editor_auto_expand(),
             self.register_editor_auto_expand_off(),
         ];
@@ -236,6 +233,21 @@ export class CureSymbolTreeViewCMD {
     private register_filter_no_global_var_off() {
         return vscode.commands.registerCommand(this.cmd_filter_no_global_var_off, () => {
             this.provider.filter_by("no-global-var");
+        });
+    }
+
+    private readonly cmd_filter_no_property = "cure-outline.filter-no-property";
+    private readonly cmd_filter_no_property_off = "cure-outline.filter-no-property-off";
+
+    private register_filter_no_property() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_property, () => {
+            this.provider.filter_by("no-property");
+        });
+    }
+
+    private register_filter_no_property_off() {
+        return vscode.commands.registerCommand(this.cmd_filter_no_property_off, () => {
+            this.provider.filter_by("no-property");
         });
     }
 
