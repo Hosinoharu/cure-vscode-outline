@@ -352,7 +352,9 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
     /** 管理符号 */
     private readonly manager: CureSymbolManager;
     /** 表示 item 的排序类型 */
-    public sort_type: OutlineSortType = CureStorage.Instance.sort_type;
+    public get sort_type() {
+        return CureStorage.Instance.sort_type;
+    }
     /** 表示修改了排序方式，获取 TreeItem 时应该进行排序
      *
      * ## 为什么引入这个成员？
@@ -364,10 +366,11 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
      */
     private sort_changed = false;
     /** 表示 item 的过滤类型 */
-    private filter_type: OutlineFilterType[] = CureStorage.Instance.filter_type;
+    private get filter_type() {
+        return CureStorage.Instance.filter_type;
+    }
     public set FilterType(value: OutlineFilterType[]) {
         const old = this.filter_type;
-        this.filter_type = value;
         const changed = old.length !== value.length || old.some((v, i) => v !== value[i]);
         changed && this.refresh();
     }
@@ -484,7 +487,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
             return;
         }
         this.sort_changed = true;
-        this.sort_type = type;
         await CureStorage.Instance.set_sort_type(type);
         CureSymbolTreeItemHandler.Instance.unhighlight_before_change_sort();
         this.refresh();
@@ -503,8 +505,6 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         } else {
             await CureStorage.Instance.add_filter(type);
         }
-
-        this.filter_type = CureStorage.Instance.filter_type;
 
         if (old.length !== this.filter_type.length) {
             for (const item of this.Items) {
