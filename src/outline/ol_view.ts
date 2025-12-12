@@ -638,8 +638,7 @@ export class CureSymbolTreeItemHandler {
     /** 重置内部一些状态 */
     public reset_state() {
         this.curr_level = 0;
-        this.last_expand_top_items = [];
-        this.expaned_items.clear();
+        this.clear_expand_record();
         this.unhighlight();
     }
 
@@ -721,6 +720,12 @@ export class CureSymbolTreeItemHandler {
      * - 然后将将其入队列
      */
     private last_expand_top_items: CureSymbolTreeItem[] = [];
+
+    /** 某些操作不需要再需要此前的展开信息了 */
+    private clear_expand_record() {
+        this.last_expand_top_items = [];
+        this.expaned_items.clear();
+    }
 
     /** 展开 item、折叠其它同层级 items，并增加一个记录
      *
@@ -1207,7 +1212,7 @@ export class CureSymbolTreeItemHandler {
         // 当展开时，就要调整上方的按钮为【折叠全部】
         const v = this.curr_level > 0 ? "expand-all" : "expand-all-off";
         CureStorage.Instance.update_switch_context(v);
-
+        this.clear_expand_record();
         this.update_view_message();
         this.set_items_level_expand(this.provider.Items, 0);
         this.provider.refresh();
