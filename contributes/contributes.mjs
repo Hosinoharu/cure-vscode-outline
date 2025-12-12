@@ -90,7 +90,7 @@ const follow = (() => {
     return create_result([follow_cursor, follow_cursor_off, follow_viewport, follow_viewport_off]);
 })();
 
-// 展开符号。navigation@2、1_follow@3
+// 展开符号。navigation@2、3、4、1_follow@3
 const expand = (() => {
     const expand_all = {
         cmd: {
@@ -139,8 +139,39 @@ const expand = (() => {
             group: "1_follow@3",
         },
     };
+    const expand_level = {
+        cmd: {
+            command: "cure-outline.expand-level",
+            title: "Expand Level",
+            icon: "$(fold-down)",
+        },
+        menu: {
+            command: "cure-outline.expand-level",
+            when: "view == cure-outline",
+            group: "navigation@3",
+        },
+    };
+    const collapse_level = {
+        cmd: {
+            command: "cure-outline.collapse-level",
+            title: "Collapse Level",
+            icon: "$(fold-up)",
+        },
+        menu: {
+            command: "cure-outline.collapse-level",
+            when: "view == cure-outline",
+            group: "navigation@4",
+        },
+    };
 
-    return create_result([expand_all, expand_all_off, editor_auto_expand, editor_auto_expand_off]);
+    return create_result([
+        expand_all,
+        expand_all_off,
+        editor_auto_expand,
+        editor_auto_expand_off,
+        expand_level,
+        collapse_level,
+    ]);
 })();
 
 // 排序。3_sort

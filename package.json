@@ -73,6 +73,18 @@
         "category": "Cure Outline"
       },
       {
+        "command": "cure-outline.expand-level",
+        "title": "Expand Level",
+        "icon": "$(fold-down)",
+        "category": "Cure Outline"
+      },
+      {
+        "command": "cure-outline.collapse-level",
+        "title": "Collapse Level",
+        "icon": "$(fold-up)",
+        "category": "Cure Outline"
+      },
+      {
         "command": "cure-outline.sort-by-position",
         "title": "Sort By Position",
         "category": "Cure Outline"
@@ -233,6 +245,14 @@
           "when": "false"
         },
         {
+          "command": "cure-outline.expand-level",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.collapse-level",
+          "when": "false"
+        },
+        {
           "command": "cure-outline.sort-by-position",
           "when": "false"
         },
@@ -351,6 +371,16 @@
           "command": "cure-outline.editor-auto-expand-off",
           "when": "view == cure-outline && cure-outline-is-editor-auto-expand",
           "group": "1_follow@3"
+        },
+        {
+          "command": "cure-outline.expand-level",
+          "when": "view == cure-outline",
+          "group": "navigation@3"
+        },
+        {
+          "command": "cure-outline.collapse-level",
+          "when": "view == cure-outline",
+          "group": "navigation@4"
         },
         {
           "command": "cure-outline.sort-by-position",

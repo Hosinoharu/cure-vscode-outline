@@ -48,9 +48,10 @@ export class CureSymbolTreeViewCMD {
 
             self.register_expand_all(),
             self.register_expand_all_off(),
-
             self.register_expand_item_all(),
             self.register_expand_item_all_off(),
+            self.register_expand_level(),
+            self.register_collapse_level(),
 
             self.register_sort_by_position(),
             self.register_sort_by_position_off(),
@@ -124,6 +125,25 @@ export class CureSymbolTreeViewCMD {
         return vscode.commands.registerCommand(this.cmd_expand_all_off, () => {
             CureStorage.Instance.update_switch_context("expand-all-off");
             this.item_handler.expand_all(false);
+        });
+    }
+
+    //#endregion
+
+    //#region 注册：折叠与展开一个层级
+
+    private readonly cmd_expand_level = "cure-outline.expand-level";
+    private readonly cmd_collapse_level = "cure-outline.collapse-level";
+
+    private register_expand_level() {
+        return vscode.commands.registerCommand(this.cmd_expand_level, () => {
+            this.item_handler.change_expand_level(true);
+        });
+    }
+
+    private register_collapse_level() {
+        return vscode.commands.registerCommand(this.cmd_collapse_level, () => {
+            this.item_handler.change_expand_level(false);
         });
     }
 

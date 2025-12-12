@@ -574,7 +574,7 @@ export class CureSymbolTreeItemHandler {
         // 显示在 Title 后面
         // self.view.description = "description";
         // 显示在第一个 item 的上面
-        // self.view.message = "message";
+        self.update_view_message();
         // 当切换到其它页面时，就是【隐藏】咯
         self.disposables.push(
             view.onDidChangeVisibility((e) => {
@@ -620,12 +620,24 @@ export class CureSymbolTreeItemHandler {
         // });
     }
 
+    /** 记录当前的展开层级，初始为 0，表示全部折叠
+     * - 当它为 1 时，表示顶层的 item 展开 1 层级
+     * - 当它为 2 时，表示顶层的 item 展开 2 层级
+     */
+    private curr_level = 0;
+
+    /** 更新 tree view 描述信息 -- 展示当前展开层级 */
+    private update_view_message() {
+        this.view.message = `Expand Level: ${this.curr_level}`;
+    }
+
     public dispose() {
         this.disposables.forEach((d) => d.dispose());
     }
 
     /** 重置内部一些状态 */
     public reset_state() {
+        this.curr_level = 0;
         this.last_expand_top_items = [];
         this.expaned_items.clear();
         this.unhighlight();
@@ -1151,6 +1163,10 @@ export class CureSymbolTreeItemHandler {
     public expand_all(expand: boolean) {
         this.reset_state();
         this.set_items_expand(this.provider.Items, expand);
+        if (!expand) {
+            this.curr_level = 0;
+            this.update_view_message();
+        }
         this.provider.refresh();
         this.fold_editor_all(expand);
     }
@@ -1161,6 +1177,40 @@ export class CureSymbolTreeItemHandler {
         item.ready_update();
         this.provider.refresh(item);
         this.fold_editor_by_item(item, expand, 6);
+    }
+
+    /** 展开 item 最多到 `this.curr_level` 层级！超过的则全部折叠！
+     * @param level 当前所在的层级
+     */
+    private set_items_level_expand(items: CureSymbolTreeItem[], level: number) {
+        const expand = level < this.curr_level;
+        items.forEach((v) => {
+            this.set_expand_state(v, expand, false);
+            if (v.children_length > 0) {
+                this.set_items_level_expand(v.Children, level + 1);
+            }
+        });
+    }
+
+    /** 修改当前的展开层次
+     *
+     * ## 效果描述
+     * - 增加。如果当前展开层级为 1，那么就展开到 2 层。也就是说，从顶层 item 开始，每个默认展开 2 级
+     * - 减少。如果当前展开层级为 2，那么就折叠到 1 层。也就是说，从顶层 item 开始，每个默认展开 1 级
+     */
+    public change_expand_level(inc: boolean) {
+        if (inc) {
+            ++this.curr_level;
+        } else if (this.curr_level > 0) {
+            --this.curr_level;
+        }
+        // 当展开时，就要调整上方的按钮为【折叠全部】
+        const v = this.curr_level > 0 ? "expand-all" : "expand-all-off";
+        CureStorage.Instance.update_switch_context(v);
+
+        this.update_view_message();
+        this.set_items_level_expand(this.provider.Items, 0);
+        this.provider.refresh();
     }
 
     // #endregion
