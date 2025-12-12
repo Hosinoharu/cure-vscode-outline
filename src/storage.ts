@@ -8,7 +8,15 @@ import * as vscode from "vscode";
 import { OutlineFilterType, OutlineSortType, SwitchCmdType } from "./types/symbol";
 import { CureSymbolTreeViewCMD } from "./outline/ol_cmd";
 
-/** 保存插件的内置配置项。单例模式 */
+/** 保存插件的内置配置项。单例模式
+ *
+ * ## 添加新配置项的流程
+ * 1. 确认该配置项是否可以从 ui 配置页面进行修改
+ * 2. 创建两个 API，用于 get/set 配置项
+ * 3. 如果它们显示在 TreeView 中，还需要配置项 context 上下文。记得初始化上下文
+ * 4. 如果从 ui 配置页面修改，还需要监听配置项的变化
+ * 5. 更新 package.json 中的配置项
+ */
 export class CureStorage {
     private readonly setting_domaim = "cure-outline";
     private static instance?: CureStorage;
@@ -49,6 +57,7 @@ export class CureStorage {
 
         this.update_follow_cursor_context(this.follow_cursor);
         this.update_follow_viewport_context(this.follow_viewport);
+        this.update_editor_auto_expand_context(this.editor_auto_expand);
     }
 
     //#region 开关式命令的上下文管理
@@ -94,6 +103,11 @@ export class CureStorage {
 
     private update_follow_viewport_context(v: boolean) {
         const t = v ? "follow-viewport" : "follow-viewport-off";
+        this.update_switch_context(t);
+    }
+
+    private update_editor_auto_expand_context(v: boolean) {
+        const t = v ? "editor-auto-expand" : "editor-auto-expand-off";
         this.update_switch_context(t);
     }
 
@@ -170,6 +184,19 @@ export class CureStorage {
 
     public get follow_viewport() {
         return this.ctx.globalState.get("followViewport") as boolean;
+    }
+
+    //#endregion
+
+    //#region 让编辑器响应item的折叠与展开
+
+    public get editor_auto_expand() {
+        return this.ctx.globalState.get("editorAutoExpand") as boolean;
+    }
+
+    public async set_editor_auto_expand(v: boolean) {
+        this.update_editor_auto_expand_context(v);
+        await this.ctx.globalState.update("editorAutoExpand", v);
     }
 
     //#endregion

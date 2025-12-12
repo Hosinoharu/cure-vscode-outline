@@ -62,6 +62,17 @@
         "category": "Cure Outline"
       },
       {
+        "command": "cure-outline.editor-auto-expand",
+        "title": "Editor Follow Expand",
+        "category": "Cure Outline"
+      },
+      {
+        "command": "cure-outline.editor-auto-expand-off",
+        "title": "✔ Editor Follow Expand",
+        "icon": "$(check)",
+        "category": "Cure Outline"
+      },
+      {
         "command": "cure-outline.sort-by-position",
         "title": "Sort By Position",
         "category": "Cure Outline"
@@ -203,6 +214,14 @@
           "when": "false"
         },
         {
+          "command": "cure-outline.editor-auto-expand",
+          "when": "false"
+        },
+        {
+          "command": "cure-outline.editor-auto-expand-off",
+          "when": "false"
+        },
+        {
           "command": "cure-outline.sort-by-position",
           "when": "false"
         },
@@ -303,6 +322,16 @@
           "command": "cure-outline.expand-all-off",
           "when": "view == cure-outline && cure-outline-is-expand-all",
           "group": "navigation@2"
+        },
+        {
+          "command": "cure-outline.editor-auto-expand",
+          "when": "view == cure-outline && !cure-outline-is-editor-auto-expand",
+          "group": "1_follow@3"
+        },
+        {
+          "command": "cure-outline.editor-auto-expand-off",
+          "when": "view == cure-outline && cure-outline-is-editor-auto-expand",
+          "group": "1_follow@3"
         },
         {
           "command": "cure-outline.sort-by-position",

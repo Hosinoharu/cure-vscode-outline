@@ -794,7 +794,12 @@ export class CureSymbolTreeItemHandler {
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
-        refresh && this.provider.refresh(item);
+        if (refresh) {
+            // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
+            // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
+            this.fold_editor_by_item(item, expand);
+            this.provider.refresh(item);
+        }
     }
 
     //#endregion
@@ -815,14 +820,60 @@ export class CureSymbolTreeItemHandler {
                 this.update_highlight_when_click(item);
             }, 0);
         }
-        if (item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded) {
-            this.unrecord_expaned_item(item);
-        } else {
-            this.record_expaned_item(item);
-        }
+        const expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
+        expand ? this.unrecord_expaned_item(item) : this.record_expaned_item(item);
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
         this.enable_follow_viewport();
+    }
+
+    /** 指定一个 item，折叠它所在的范围！
+     * @param level 指定展开或折叠的层级，默认情况下：
+     * - 展开时，只展开 1 层
+     * - 折叠时，折叠 3 层
+     */
+    private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, level?: number) {
+        if (!CureStorage.Instance.editor_auto_expand) {
+            return;
+        }
+
+        const to = item.symbol.uri.toString();
+        const curr_doc = vscode.window.activeTextEditor?.document;
+        if (!curr_doc || curr_doc.uri.toString() !== to) {
+            return;
+        }
+
+        const start = item.symbol.range.start.line;
+        const end = item.symbol.range.end.line;
+        if (start === end) {
+            return;
+        }
+
+        console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
+        const action = expand ? "editor.unfold" : "editor.fold";
+        const levels = level || (expand ? 1 : 3);
+        vscode.commands.executeCommand(action, {
+            levels,
+            selectionLines: [start],
+        });
+    }
+
+    /** 折叠或展开编辑器的全部 */
+    private fold_editor_all(expand: boolean) {
+        const first = this.provider.Items[0];
+        if (!first) {
+            return;
+        }
+        const to = first.symbol.uri.toString();
+        const curr_doc = vscode.window.activeTextEditor?.document;
+        if (!curr_doc || curr_doc.uri.toString() !== to) {
+            return;
+        }
+
+        if (CureStorage.Instance.editor_auto_expand) {
+            const action = expand ? "editor.unfoldAll" : "editor.foldAll";
+            vscode.commands.executeCommand(action);
+        }
     }
 
     //#endregion
@@ -1054,11 +1105,11 @@ export class CureSymbolTreeItemHandler {
     //#region 折叠与展开全部
 
     /** 修改多个 items 折叠状态！*/
-    private set_items_expand(items: CureSymbolTreeItem[], state: boolean) {
+    private set_items_expand(items: CureSymbolTreeItem[], expand: boolean) {
         items.forEach((v) => {
-            this.set_expand_state(v, state, false);
+            this.set_expand_state(v, expand, false);
             if (v.children_length > 0) {
-                this.set_items_expand(v.Children, state);
+                this.set_items_expand(v.Children, expand);
             }
         });
     }
@@ -1068,6 +1119,7 @@ export class CureSymbolTreeItemHandler {
         this.reset_state();
         this.set_items_expand(this.provider.Items, expand);
         this.provider.refresh();
+        this.fold_editor_all(expand);
     }
 
     /** 折叠与展开一个 item 的所有层级 */
@@ -1075,6 +1127,7 @@ export class CureSymbolTreeItemHandler {
         this.set_items_expand([item], expand);
         item.ready_update();
         this.provider.refresh(item);
+        this.fold_editor_by_item(item, expand, 6);
     }
 
     // #endregion

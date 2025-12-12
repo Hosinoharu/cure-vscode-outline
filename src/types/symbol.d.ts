@@ -50,7 +50,7 @@ type SortableSymbol = CureOneSymbol[] | DocumentSymbol[] | TreeItemSymbol[];
 
 //#region 开关类命令
 
-type Expandype = "expand-all" | "expand-only-one";
+type Expandype = "expand-all" | "expand-only-one" | "editor-auto-expand";
 /** 折叠与展开命令 */
 type ExpandCmdType = Expandype | `${Expandype}-off`;
 

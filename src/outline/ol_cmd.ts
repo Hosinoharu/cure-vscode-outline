@@ -72,6 +72,9 @@ export class CureSymbolTreeViewCMD {
 
             self.register_follow_viewport(),
             self.register_follow_viewport_off(),
+
+            self.register_editor_auto_expand(),
+            self.register_editor_auto_expand_off(),
         ];
         ctx.subscriptions.push(...commands);
 
@@ -523,6 +526,25 @@ export class CureSymbolTreeViewCMD {
     /** 根据 follow 功能是否开启，在当前文档中执行一次 follow cursor 和 follow viewport */
     public run_follow_feature() {
         !this.run_follow_cursor() && this.run_follow_viewport();
+    }
+
+    //#endregion
+
+    //#region 注册：editor auto expand
+
+    private readonly cmd_editor_auto_expand = "cure-outline.editor-auto-expand";
+    private readonly cmd_editor_auto_expand_off = "cure-outline.editor-auto-expand-off";
+
+    private register_editor_auto_expand() {
+        return vscode.commands.registerCommand(this.cmd_editor_auto_expand, async () => {
+            await CureStorage.Instance.set_editor_auto_expand(true);
+        });
+    }
+
+    private register_editor_auto_expand_off() {
+        return vscode.commands.registerCommand(this.cmd_editor_auto_expand_off, async () => {
+            await CureStorage.Instance.set_editor_auto_expand(false);
+        });
     }
 
     //#endregion

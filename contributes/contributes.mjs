@@ -8,7 +8,7 @@ const get_cmds = (items) =>
 const get_menus = (items) => items.map((item) => item.menu);
 const create_result = (items) => ({ cmd: get_cmds(items), menu: get_menus(items) });
 
-// 重新加载符号
+// 重新加载符号。navigation@1
 const reload_symbol = {
     cmd: {
         command: "cure-outline.reload-symbol",
@@ -22,7 +22,7 @@ const reload_symbol = {
     },
 };
 command_palette.push({ command: reload_symbol.cmd.command, when: "false" });
-// 重新加载自定义书签
+// 重新加载自定义书签。navigation@1
 const reload_bookmark = {
     cmd: {
         command: "cure-outline.reload-bookmark",
@@ -37,6 +37,7 @@ const reload_bookmark = {
 };
 command_palette.push({ command: reload_bookmark.cmd.command, when: "false" });
 
+// follow cursor、follow viewport。1_follow@1、1_follow@2
 const follow = (() => {
     const follow_cursor = {
         cmd: {
@@ -89,7 +90,7 @@ const follow = (() => {
     return create_result([follow_cursor, follow_cursor_off, follow_viewport, follow_viewport_off]);
 })();
 
-// 展开符号
+// 展开符号。navigation@2、1_follow@3
 const expand = (() => {
     const expand_all = {
         cmd: {
@@ -115,11 +116,34 @@ const expand = (() => {
             group: "navigation@2",
         },
     };
+    const editor_auto_expand = {
+        cmd: {
+            command: "cure-outline.editor-auto-expand",
+            title: "Editor Follow Expand",
+        },
+        menu: {
+            command: "cure-outline.editor-auto-expand",
+            when: "view == cure-outline && !cure-outline-is-editor-auto-expand",
+            group: "1_follow@3",
+        },
+    };
+    const editor_auto_expand_off = {
+        cmd: {
+            command: "cure-outline.editor-auto-expand-off",
+            title: "✔ Editor Follow Expand",
+            icon: "$(check)",
+        },
+        menu: {
+            command: "cure-outline.editor-auto-expand-off",
+            when: "view == cure-outline && cure-outline-is-editor-auto-expand",
+            group: "1_follow@3",
+        },
+    };
 
-    return create_result([expand_all, expand_all_off]);
+    return create_result([expand_all, expand_all_off, editor_auto_expand, editor_auto_expand_off]);
 })();
 
-// 排序
+// 排序。3_sort
 const sort = (() => {
     const sort_by_position = {
         cmd: {
@@ -201,7 +225,7 @@ const sort = (() => {
     ]);
 })();
 
-// 过滤
+// 过滤。2_filter
 const filter = (() => {
     const filter_no_local_var = {
         cmd: {
