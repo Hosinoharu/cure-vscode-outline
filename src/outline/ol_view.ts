@@ -897,11 +897,13 @@ export class CureSymbolTreeItemHandler {
         const action = expand ? "editor.unfold" : "editor.fold";
         levels = levels ?? (expand ? 3 : 1);
         this.disable_follow_viewport();
+        this.disable_follow_cursor();
         vscode.commands.executeCommand(action, {
             levels,
             selectionLines: [start],
         });
         this.enable_follow_viewport();
+        this.enable_follow_cursor();
     }
 
     /** 折叠或展开编辑器的全部 */
