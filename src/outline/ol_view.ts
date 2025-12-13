@@ -815,14 +815,12 @@ export class CureSymbolTreeItemHandler {
         if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
             item.set_collapsible_state(expand);
         }
-        // 这里可能发生重复折叠，但是代码简单
-        // 很多时候，并不会刷新子 item，而是直接刷新父 item
-        // 如果每个地方都调用该 API 有点麻烦，放在这里就非常棒了
-        // 就是会出现重复调用咯，当前就这样吧
-        // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
-        // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
-        this.fold_editor_by_item(item, expand);
-        this.provider.refresh(item);
+        if (refresh) {
+            // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
+            // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
+            this.fold_editor_by_item(item, expand);
+            this.provider.refresh(item);
+        }
     }
 
     //#endregion
@@ -874,8 +872,11 @@ export class CureSymbolTreeItemHandler {
     }
 
     /** 指定一个 item，折叠它所在的范围！
-     * @param levels 指定展开或折叠的层级，默认情况为 3*/
-    private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, levels = 3) {
+     * @param levels 指定展开或折叠的层级，默认情况下：
+     * - 展开时，层级为 3
+     * - 折叠时，层级为 1
+     */
+    private fold_editor_by_item(item: CureSymbolTreeItem, expand: boolean, levels?: number) {
         if (!CureStorage.Instance.editor_auto_expand || !this.is_editor_auto_expand_ok) {
             return;
         }
@@ -894,6 +895,7 @@ export class CureSymbolTreeItemHandler {
 
         console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
         const action = expand ? "editor.unfold" : "editor.fold";
+        levels = levels ?? (expand ? 3 : 1);
         this.disable_follow_viewport();
         vscode.commands.executeCommand(action, {
             levels,
@@ -937,10 +939,10 @@ export class CureSymbolTreeItemHandler {
         } else {
             h.highlighten(false);
             if (!first.is_same_top_parent(h) || (second && !second.is_same_top_parent(h))) {
-                // 因为需要取消它的高亮，所以在后面统一刷新，这里仅修改折叠
-                this.unrecord_expaned_item(h, false);
+                this.unrecord_expaned_item(h);
+            } else {
+                this.provider.refresh(h);
             }
-            this.provider.refresh(h);
         }
     }
 
