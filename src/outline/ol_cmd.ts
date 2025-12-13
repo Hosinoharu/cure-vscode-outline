@@ -477,9 +477,38 @@ export class CureSymbolTreeViewCMD {
         if (ranges.length === 0) {
             return;
         }
-        const top_line = ranges[0].start.line;
-        const bottom_line = ranges[0].end.line;
-        const center_line = Math.floor((top_line + bottom_line) / 2);
+        let center_line = 0;
+        // 如果出现折叠，则 ranges 长度大于 1 哟
+        // 但是 follow viewport 时不会自动展开折叠的区域
+        // 所以如果有多个 range，则取最靠近中间行的 range
+        // 否则，直接取第一个 range 的中间部分
+        if (ranges.length === 1) {
+            const top_line = ranges[0].start.line;
+            const bottom_line = ranges[0].end.line;
+            center_line = Math.ceil((top_line + bottom_line) / 2);
+        } else {
+            const top_line = ranges[0].start.line;
+            const bottom_line = ranges[ranges.length - 1].end.line;
+            const want_center_line = Math.ceil((top_line + bottom_line) / 2);
+            // 下面找出最靠近 want_center_line 的 range 的起始行
+            let min_gap = Infinity;
+            let target_line = want_center_line;
+            for (const range of ranges) {
+                // 折叠区域的特征：[20:0 -> 21:64)，开始和结束的行数差一
+                // const is_folded = range.end.line - range.start.line === 1;
+                // 正在好在 range 范围中
+                if (range.start.line <= want_center_line && want_center_line <= range.end.line) {
+                    break;
+                }
+                const gap = Math.abs(range.start.line - want_center_line);
+                if (gap < min_gap) {
+                    min_gap = gap;
+                    target_line = range.start.line;
+                }
+            }
+            center_line = target_line;
+        }
+        // console.log("follow viewport line:", center_line);
         const range = new vscode.Range(center_line, 0, center_line, 0);
         if (this.item_handler.is_highlight_range_changed(range)) {
             const search_items = this.item_handler.get_search_items(range);
