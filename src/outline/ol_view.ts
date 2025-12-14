@@ -393,7 +393,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
 
     // #region 处理tree_item
 
-    getTreeItem(element: CureSymbolTreeItem): vscode.TreeItem {
+    async getTreeItem(element: CureSymbolTreeItem): Promise<vscode.TreeItem> {
         if (this.filter_type.length > 0) {
             element.filted_children = this.apply_filter(element.Children);
             // 子元素没有了，需要重新设置父元素的折叠状态
@@ -405,7 +405,7 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         return element;
     }
 
-    getChildren(element?: CureSymbolTreeItem): Thenable<CureSymbolTreeItem[]> {
+    async getChildren(element?: CureSymbolTreeItem): Promise<CureSymbolTreeItem[]> {
         if (element) {
             const items = element.filted_children ?? element.Children;
             return Promise.resolve(this.apply_sort(items));
@@ -418,11 +418,11 @@ export class CureSymbolTreeProvider implements vscode.TreeDataProvider<CureSymbo
         return element.parent;
     }
 
-    resolveTreeItem(
+    async resolveTreeItem(
         item: vscode.TreeItem,
         element: CureSymbolTreeItem,
         token: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.TreeItem> {
+    ): Promise<vscode.TreeItem> {
         // 因为获取符号上面的注释会增加消耗，且不是所有符号都会被查看 tooltip
         // 所以将其的获取放到这里，而不是在创建 item 的时候
         item.tooltip = element.Tooltip;

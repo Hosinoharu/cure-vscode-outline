@@ -30,7 +30,7 @@ export class CureTreeItemDecorationProvider implements vscode.FileDecorationProv
         this._onDidChangeFileDecorations.fire(uri);
     }
 
-    provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
+    async provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
         const kind = this.get_kind(uri);
         if (!kind) {
             return;

@@ -63,7 +63,7 @@ export class CureSymbolManager {
         let ok = true;
         try {
             await this.update_symbols();
-            this.regions = await bm_manager.update_file(doc);
+            this.regions = await bm_manager.get_parsed_result(doc);
             this.finished = true;
             await bm_reload_for_ol();
         } catch (e: any) {

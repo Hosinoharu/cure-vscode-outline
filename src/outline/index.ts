@@ -34,7 +34,7 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
 
     //#region 更新函数
 
-    async function update_symbol(doc: vscode.TextDocument, type: "switch" | "save" | "edit") {
+    async function update_symbol(doc: vscode.TextDocument, type: "switch" | "edit") {
         console.log("update symbol when doc:", type, ". url:", doc.uri.toString().slice(0, 10));
         await ol_provider.reload_symbol(doc, type === "switch");
 
@@ -73,18 +73,6 @@ export async function ol_init(ctx: vscode.ExtensionContext) {
                 ol_item_handler.disable_follow_viewport();
                 ol_item_handler.reset_state();
                 e && (await debounced_update_symbol(e.document, "switch"));
-            } catch {}
-        })
-    );
-
-    // 监听文件保存
-    ctx.subscriptions.push(
-        vscode.workspace.onDidSaveTextDocument(async (e) => {
-            if (!should_handle(e)) {
-                return;
-            }
-            try {
-                await debounced_update_symbol(e, "save");
             } catch {}
         })
     );

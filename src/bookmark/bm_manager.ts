@@ -85,16 +85,56 @@ export class CureBookmarkManager {
         }
     }
 
+    /** 当前是否正在解析自定义书签
+     *
+     * ## 为什么引入它
+     * 假设切换到文档 A 时，会解析 region 注释并展示到 outline，同时也需要提供 region 的折叠范围，
+     *
+     * 很显然这里复用了数据，所以肯定不需要重复解析，关键是：**怎么确保二者都拿到正确的数据！**
+     *
+     * 解析器是单例模式，而两处解析的位置都是**异步函数中**，
+     *
+     * 因为插件的解析流程设定了 `debounce`（延迟执行），所以肯定是 RegionFoldingProvider 先执行！！
+     *
+     * 所以干脆**直接在 RegionFoldingProvider 中完成了整个文档的自定义的书签解析**，
+     *
+     * 当 outline 要展示 region 符号时，就直接拿解析结果咯，但可能当前正在解析中，所以有了这个判定！
+     */
+    private is_parsing = false;
+    /** 保存解析出来的、用于展示到 outline 的结果 */
+    private parsed_result?: CureOneSymbol[];
+
+    /** 获取解析出的结果，默认情况下会先被 RegionFoldingProvider 触发然后保存结果。
+     *
+     * @param parse 是否强制解析，默认为 false
+     */
+    public async get_parsed_result(doc: vscode.TextDocument, parse?: boolean) {
+        if (!parse && this.parsed_result) {
+            return this.parsed_result;
+        }
+        if (!this.is_parsing) {
+            return await this.parse(doc);
+        }
+        // 当前正在解析，需要等待解析完成 —— 并没有再次尝试哟
+        return new Promise<CureOneSymbol[] | undefined>((resolve) => {
+            setInterval(() => {
+                resolve(this.parsed_result);
+            }, 200);
+        });
+    }
+
     /** 读取文档内容，解析出其中的自定义标签
      *
      * @return 返回解析后的 #region 符号！如果返回 undefined 表示解析失败
      */
-    public async update_file(doc: vscode.TextDocument) {
-        const uri = doc.uri;
-        if (vscode.window.activeTextEditor?.document.uri.fsPath !== uri.fsPath) {
-            return undefined;
+    public async parse(doc: vscode.TextDocument) {
+        if (this.is_parsing) {
+            return;
         }
+        this.is_parsing = true;
+        // ================================================================
 
+        const uri = doc.uri;
         // 暂时不需要判断每一行是否为注释之类的情况，因为自定义书签的格式是特殊的
         /** 记录解析的自定义注释 */
         const symbols: CureOneSymbol[] = [];
@@ -124,6 +164,10 @@ export class CureBookmarkManager {
 
         const { for_outline, for_bookmark } = region_parser.get_result();
         for_bookmark.forEach((r) => symbols.push(r));
+
+        // ================================================================
+        this.is_parsing = false;
+        this.parsed_result = for_outline;
         return for_outline;
     }
 
@@ -191,8 +235,8 @@ class OneRegionSymbol {
 /** 解析 region 注释。单例模式.
  *
  * ## 用法说明
- * - 先调用 `.reset(file)` 重置状态
- * - 然后不断调用 `parse_one_line(line)` 解析每一行
+ * - 先调用 `.reset()` 重置状态
+ * - 然后不断调用 `parse_one_line()` 解析每一行
  * - 最后调用 `get_result()` 获取解析结果
  */
 class CureRegionParser {
@@ -327,5 +371,27 @@ class CureRegionParser {
         if (endregion) {
             return { col: endregion.index || 0 };
         }
+    }
+}
+
+/** 实现让 region 区域可以折叠 —— 部分编程语言的扩展并没有提供该功能，比如 rust */
+export class CureRegionFoldingProvider implements vscode.FoldingRangeProvider {
+    public async provideFoldingRanges(
+        document: vscode.TextDocument,
+        context: vscode.FoldingContext,
+        token: vscode.CancellationToken
+    ): Promise<vscode.FoldingRange[] | undefined> {
+        const regions = await CureBookmarkManager.Instance.parse(document);
+        if (!regions || regions.length === 0) {
+            return;
+        }
+
+        return regions.map((r) => {
+            return new vscode.FoldingRange(
+                r.range.start.line,
+                r.range.end.line,
+                vscode.FoldingRangeKind.Region
+            );
+        });
     }
 }

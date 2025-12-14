@@ -213,7 +213,7 @@ export class CureBookmarkTreeProvider implements vscode.TreeDataProvider<CureBoo
 
     /** 重新加载一个文本的符号！ */
     async reload_bookmark(doc: vscode.TextDocument) {
-        const ok = await this.manager.update_file(doc);
+        const ok = await this.manager.get_parsed_result(doc, true);
         ok && this.reload();
     }
 
