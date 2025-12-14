@@ -196,7 +196,7 @@ class OneRegionSymbol {
      * @param line 符号所在的行
      * @param col 符号所在的列
      */
-    constructor(public name: string, private line: number, private col: number) {
+    constructor(public name: string, public line: number, private col: number) {
         this.selection_range = new vscode.Range(line, col, line, col + "#region".length);
     }
 
@@ -266,6 +266,8 @@ class CureRegionParser {
     private uri?: vscode.Uri;
     /** 记录当前文件的语言 */
     private languageId?: string;
+    /** 记录解析出的、配对的 region 的范围 */
+    public closed_regions: vscode.FoldingRange[] = [];
 
     /** 重置状态
      * @param uri  文件路径，用于初始化符号用的
@@ -275,6 +277,7 @@ class CureRegionParser {
         this.for_outline = [];
         this.for_bookmark = [];
         this.region_stack = [];
+        this.closed_regions = [];
         this.uri = uri;
         this.languageId = languageId;
     }
@@ -331,6 +334,9 @@ class CureRegionParser {
                 this.for_outline.push(s);
             }
             this.for_bookmark.push(start.create_region_symbol_bm(this.uri));
+            this.closed_regions.push(
+                new vscode.FoldingRange(start.line, ln, vscode.FoldingRangeKind.Region)
+            );
         }
     }
 
@@ -381,17 +387,11 @@ export class CureRegionFoldingProvider implements vscode.FoldingRangeProvider {
         context: vscode.FoldingContext,
         token: vscode.CancellationToken
     ): Promise<vscode.FoldingRange[] | undefined> {
-        const regions = await CureBookmarkManager.Instance.parse(document);
-        if (!regions || regions.length === 0) {
+        await CureBookmarkManager.Instance.parse(document);
+        const regions = CureRegionParser.Instance.closed_regions;
+        if (regions.length === 0) {
             return;
         }
-
-        return regions.map((r) => {
-            return new vscode.FoldingRange(
-                r.range.start.line,
-                r.range.end.line,
-                vscode.FoldingRangeKind.Region
-            );
-        });
+        return regions;
     }
 }
