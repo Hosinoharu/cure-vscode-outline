@@ -1,0 +1,23 @@
+// 如果在 `package.json` 添加 `snippets` 需要指定编程语言，无法指定全部编程语言。
+// 如果想要应用到全部编程语言，则需要用到 `vscode CompletionItemProvider API`
+// 太麻烦了，直接在 vscode 中添加全局 `snippets`、将下面的内容复制过去就行
+{
+    "my code region": {
+        "scope": "",
+        "prefix": "#region",
+        "body": [
+            "$LINE_COMMENT #region $0",
+            "$1",
+            "$LINE_COMMENT #endregion"
+        ],
+        "description": "my code region"
+    },
+    "my code tag": {
+        "scope": "",
+        "prefix": "#cure",
+        "body": [
+            "$LINE_COMMENT #cure-$0"
+        ],
+        "description": "my code tag"
+    }
+}
