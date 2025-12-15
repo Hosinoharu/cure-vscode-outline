@@ -7,7 +7,9 @@
         "prefix": "#region",
         "body": [
             "$LINE_COMMENT #region $1",
+            "",
             "$0",
+            "",
             "$LINE_COMMENT #endregion"
         ],
         "description": "my code region"
