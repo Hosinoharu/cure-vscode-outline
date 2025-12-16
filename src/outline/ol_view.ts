@@ -892,6 +892,22 @@ export class CureSymbolTreeItemHandler {
         if (start === end) {
             return;
         }
+        // 有些编程会将符号上面的注释也看作是 `range`，如下：
+        // ```rust
+        // pub struct Foo {
+        //     /// 这是一个注释
+        //     /// 符号的 range 中注释行开始到符号本身所在行
+        //     pub bar: i32,
+        // }
+        // ```
+        // 这种情况需要额外处理，否则会有一个【闪烁】的 bug
+        // 根据【符号注释】在符号的上方从而忽略它的折叠！
+        // 对于一个符号注释来说，range 包括：[注释起始行, 符号所在行]
+        // 而符号所在行如果正好是 range 的结束行，就说明上方的是注释了
+        const selection_line = item.symbol.selection_range.start.line;
+        if (end === selection_line) {
+            return;
+        }
 
         console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
         const action = expand ? "editor.unfold" : "editor.fold";
