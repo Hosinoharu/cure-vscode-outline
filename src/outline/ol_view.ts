@@ -916,7 +916,11 @@ export class CureSymbolTreeItemHandler {
         this.disable_follow_cursor();
         vscode.commands.executeCommand(action, {
             levels,
-            selectionLines: [start],
+            // 因为部分编程语言的符号上方还有东西（如 rust 的 `#[derive(Debug)]`）
+            // 所以可折叠的行只能根据符号所在行来确定了，而不是根据 range 行来看
+            // 这样的结果是：符号的确可以折叠，但符号的注释就不会自动折叠了，需要手动处理，
+            // 当然也可以解析出上方的内容让注释也折叠，但想一想还是算了
+            selectionLines: [selection_line],
         });
         this.enable_follow_viewport();
         this.enable_follow_cursor();
