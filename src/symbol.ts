@@ -233,7 +233,8 @@ export class CureOneSymbol {
             return "[Current document is not the same as the symbol's document]";
         }
 
-        const start_line = this.range.start.line;
+        // 注意使用 selection_range，它才是符号的真正起始行！
+        const start_line = this.selection_range.start.line;
         if (start_line < 0 || start_line >= curr_doc.lineCount) {
             return "";
         }
