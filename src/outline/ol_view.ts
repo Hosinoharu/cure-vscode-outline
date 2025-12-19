@@ -842,7 +842,13 @@ export class CureSymbolTreeItemHandler {
             }, 0);
         }
         const expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
-        expand ? this.unrecord_expaned_item(item) : this.record_expaned_item(item);
+        expand ? this.unrecord_expaned_item(item, false) : this.record_expaned_item(item, false);
+        this.provider.refresh(item);
+
+        const fold_line = this.is_item_can_fold_editor(item);
+        if (fold_line !== undefined) {
+            this._fold_editor(!expand, fold_line, expand ? 3 : 1);
+        }
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
         this.enable_follow_viewport();
@@ -881,15 +887,15 @@ export class CureSymbolTreeItemHandler {
             return;
         }
 
-        const to = item.symbol.uri.toString();
-        const curr_editor = vscode.window.activeTextEditor;
-        const curr_doc = curr_editor?.document;
-        if (!curr_doc || curr_doc.uri.toString() !== to) {
+        const fold_line = this.is_item_can_fold_editor(item);
+        if (fold_line === undefined) {
             return;
         }
 
         // 【优化体验】当折叠的时候，如果符号所在的区域和编辑器的可视区域有交集，则不折叠
         if (!expand) {
+            const curr_editor = vscode.window.activeTextEditor!;
+            const curr_doc = curr_editor.document;
             const viewport_ranges = curr_editor.visibleRanges;
             // 稍微增加一些范围，超出视口太远才折叠
             const viewport_start = Math.max(viewport_ranges[0].start.line - 5, 0);
@@ -903,11 +909,26 @@ export class CureSymbolTreeItemHandler {
             }
         }
 
+        console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
+        levels = levels ?? (expand ? 3 : 1);
+        this._fold_editor(expand, fold_line, levels);
+    }
+
+    /** 是否折叠 item 的时候能折叠编辑器区域。如果可以折叠，则返回折叠的起始行 */
+    private is_item_can_fold_editor(item: CureSymbolTreeItem) {
+        const to = item.symbol.uri.toString();
+        const curr_editor = vscode.window.activeTextEditor;
+        const curr_doc = curr_editor?.document;
+        if (!curr_doc || curr_doc.uri.toString() !== to) {
+            return;
+        }
+
         const start = item.symbol.range.start.line;
         const end = item.symbol.range.end.line;
         if (start === end) {
             return;
         }
+
         // 有些编程会将符号上面的注释也看作是 `range`，如下：
         // ```rust
         // pub struct Foo {
@@ -925,18 +946,25 @@ export class CureSymbolTreeItemHandler {
             return;
         }
 
-        console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
+        // 因为部分编程语言的符号上方还有东西（如 rust 的 `#[derive(Debug)]`）
+        // 所以可折叠的行只能根据符号所在行来确定了，而不是根据 range 行来看
+        // 这样的结果是：符号的确可以折叠，但符号的注释就不会自动折叠了，需要手动处理，
+        // 当然也可以解析出上方的内容让注释也折叠，但想一想还是算了
+        return selection_line;
+    }
+
+    /** 折叠或展开编辑器
+     *
+     * @param line 表示折叠起始行
+     * @param level 表示折叠的层级
+     */
+    private _fold_editor(expand: boolean, line: number, level: number) {
         const action = expand ? "editor.unfold" : "editor.fold";
-        levels = levels ?? (expand ? 3 : 1);
         this.disable_follow_viewport();
         this.disable_follow_cursor();
         vscode.commands.executeCommand(action, {
-            levels,
-            // 因为部分编程语言的符号上方还有东西（如 rust 的 `#[derive(Debug)]`）
-            // 所以可折叠的行只能根据符号所在行来确定了，而不是根据 range 行来看
-            // 这样的结果是：符号的确可以折叠，但符号的注释就不会自动折叠了，需要手动处理，
-            // 当然也可以解析出上方的内容让注释也折叠，但想一想还是算了
-            selectionLines: [selection_line],
+            level,
+            selectionLines: [line],
         });
         this.enable_follow_viewport();
         this.enable_follow_cursor();
