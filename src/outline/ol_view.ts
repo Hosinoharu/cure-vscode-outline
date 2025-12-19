@@ -842,13 +842,7 @@ export class CureSymbolTreeItemHandler {
             }, 0);
         }
         const expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
-        expand ? this.unrecord_expaned_item(item, false) : this.record_expaned_item(item, false);
-        this.provider.refresh(item);
-
-        const fold_line = this.is_item_can_fold_editor(item);
-        if (fold_line !== undefined) {
-            this._fold_editor(!expand, fold_line, expand ? 3 : 1);
-        }
+        expand ? this.unrecord_expaned_item(item) : this.record_expaned_item(item);
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
         this.enable_follow_viewport();
@@ -888,30 +882,11 @@ export class CureSymbolTreeItemHandler {
         }
 
         const fold_line = this.is_item_can_fold_editor(item);
-        if (fold_line === undefined) {
-            return;
+        if (fold_line !== undefined) {
+            console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
+            levels = levels ?? (expand ? 3 : 1);
+            this._fold_editor(expand, fold_line, levels);
         }
-
-        // 【优化体验】当折叠的时候，如果符号所在的区域和编辑器的可视区域有交集，则不折叠
-        if (!expand) {
-            const curr_editor = vscode.window.activeTextEditor!;
-            const curr_doc = curr_editor.document;
-            const viewport_ranges = curr_editor.visibleRanges;
-            // 稍微增加一些范围，超出视口太远才折叠
-            const viewport_start = Math.max(viewport_ranges[0].start.line - 5, 0);
-            const viewport_end = Math.min(
-                viewport_ranges[viewport_ranges.length - 1].end.line + 5,
-                curr_doc.lineCount
-            );
-            const viewport_range = new vscode.Range(viewport_start, 0, viewport_end, 0);
-            if (viewport_range.intersection(item.symbol.range)) {
-                return;
-            }
-        }
-
-        console.log(`fold editor by item: ${item.name}, expand: ${expand}`);
-        levels = levels ?? (expand ? 3 : 1);
-        this._fold_editor(expand, fold_line, levels);
     }
 
     /** 是否折叠 item 的时候能折叠编辑器区域。如果可以折叠，则返回折叠的起始行 */
@@ -956,14 +931,14 @@ export class CureSymbolTreeItemHandler {
     /** 折叠或展开编辑器
      *
      * @param line 表示折叠起始行
-     * @param level 表示折叠的层级
+     * @param levels 表示折叠的层级
      */
-    private _fold_editor(expand: boolean, line: number, level: number) {
+    private _fold_editor(expand: boolean, line: number, levels: number) {
         const action = expand ? "editor.unfold" : "editor.fold";
         this.disable_follow_viewport();
         this.disable_follow_cursor();
         vscode.commands.executeCommand(action, {
-            level,
+            levels,
             selectionLines: [line],
         });
         this.enable_follow_viewport();
