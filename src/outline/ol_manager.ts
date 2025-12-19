@@ -101,10 +101,12 @@ export class CureSymbolManager {
              *
              * 也就是说，如果 vscode 的 outline 配置项是按照名称排序的，那么获取的符号树也是按照名称排序的！
              *
-             * 为了保证后续对比时，符号的顺序一致，所以需要按当前排序方式进行排序
+             * 为了保证后续对比时，符号的顺序一致，所以需要按位置进行排序
              */
             self.symbols = symbols
-                ? CureOneSymbol.sort_by(CureStorage.Instance.sort_type, symbols, true)
+                ? CureStorage.Instance.sort_type !== "position"
+                    ? CureOneSymbol.sort_by("position", symbols, true)
+                    : symbols
                 : [];
         }
     }
@@ -116,17 +118,15 @@ export class CureSymbolManager {
             return symbols;
         }
 
-        const sort_type = CureStorage.Instance.sort_type;
-        CureOneSymbol.sort_by(sort_type, this.regions, true);
-        return this._insert_region_symbols(symbols, this.regions, sort_type);
+        // 按位置排序才能得到正确的嵌套关系！
+        CureOneSymbol.sort_by("position", this.regions, true);
+        const result = this._insert_region_symbols(symbols, this.regions);
+
+        return CureOneSymbol.sort_by(CureStorage.Instance.sort_type, result, true);
     }
 
     /** 递归合并 */
-    private _insert_region_symbols(
-        symbols: CureOneSymbol[],
-        regions: CureOneSymbol[],
-        sort_type: OutlineSortType
-    ) {
+    private _insert_region_symbols(symbols: CureOneSymbol[], regions: CureOneSymbol[]) {
         if (symbols.length === 0) {
             return regions;
         }
@@ -148,23 +148,20 @@ export class CureSymbolManager {
             if (curr_region.contains(curr_symbol)) {
                 curr_region.children = this._insert_region_symbols(
                     [curr_symbol],
-                    curr_region.children,
-                    sort_type
+                    curr_region.children
                 );
                 ++i_s;
                 continue;
             }
             // s 包含 region，需要调整 s.child 和 region 的位置
             if (curr_symbol.contains(curr_region)) {
-                curr_symbol.children = this._insert_region_symbols(
-                    curr_symbol.children,
-                    [curr_region],
-                    sort_type
-                );
+                curr_symbol.children = this._insert_region_symbols(curr_symbol.children, [
+                    curr_region,
+                ]);
                 ++i_r;
             }
             // s 在 region 之前
-            else if (curr_symbol.is_before(curr_region, sort_type)) {
+            else if (curr_symbol.is_before(curr_region)) {
                 result.push(curr_symbol);
                 ++i_s;
             }
