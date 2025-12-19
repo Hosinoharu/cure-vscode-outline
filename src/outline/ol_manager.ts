@@ -103,11 +103,7 @@ export class CureSymbolManager {
              *
              * 为了保证后续对比时，符号的顺序一致，所以需要按位置进行排序
              */
-            self.symbols = symbols
-                ? CureStorage.Instance.sort_type !== "position"
-                    ? CureOneSymbol.sort_by("position", symbols, true)
-                    : symbols
-                : [];
+            self.symbols = symbols ? CureOneSymbol.sort_by("position", symbols, true) : [];
         }
     }
 
