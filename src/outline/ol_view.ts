@@ -928,6 +928,25 @@ export class CureSymbolTreeItemHandler {
         return selection_line;
     }
 
+    /** 判断 item 是否和编辑区视口有交集！
+     *
+     * 当 `follow cursor、follow viewport` 触发折叠的时候，
+     * 如果符号所在的区域和编辑器的可视区域有交集，则不折叠
+     */
+    private is_item_in_viewport(item: CureSymbolTreeItem) {
+        const curr_editor = vscode.window.activeTextEditor!;
+        const curr_doc = curr_editor.document;
+        const viewport_ranges = curr_editor.visibleRanges;
+        // 稍微增加一些范围，超出视口太远才折叠
+        const viewport_start = Math.max(viewport_ranges[0].start.line - 5, 0);
+        const viewport_end = Math.min(
+            viewport_ranges[viewport_ranges.length - 1].end.line + 5,
+            curr_doc.lineCount
+        );
+        const viewport_range = new vscode.Range(viewport_start, 0, viewport_end, 0);
+        return viewport_range.intersection(item.symbol.range) !== undefined;
+    }
+
     /** 折叠或展开编辑器
      *
      * @param line 表示折叠起始行
@@ -979,11 +998,12 @@ export class CureSymbolTreeItemHandler {
         if (first.equal(h) || second?.equal(h)) {
         } else {
             h.highlighten(false);
+            // 如果 item 在视口内，则不折叠编辑区
+            const refresh = !this.is_item_in_viewport(h);
             if (!first.is_same_top_parent(h) || (second && !second.is_same_top_parent(h))) {
-                this.unrecord_expaned_item(h);
-            } else {
-                this.provider.refresh(h);
+                this.unrecord_expaned_item(h, refresh);
             }
+            !refresh && this.provider.refresh(h);
         }
     }
 
