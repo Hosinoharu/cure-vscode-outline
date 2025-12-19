@@ -816,9 +816,12 @@ export class CureSymbolTreeItemHandler {
             item.set_collapsible_state(expand);
         }
         if (refresh) {
-            // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
-            // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
-            this.fold_editor_by_item(item, expand);
+            // 折叠的时候，如果在编辑区视口中，则不折叠！
+            if (expand || !this.is_item_in_viewport(item)) {
+                // 在 Outline TreeView 中，item 是否可折叠根据它是否有子项来决定，
+                // 而在编辑器中，是否可折叠则不看这个哟，看的是 range
+                this.fold_editor_by_item(item, expand);
+            }
             this.provider.refresh(item);
         }
     }
@@ -842,7 +845,9 @@ export class CureSymbolTreeItemHandler {
             }, 0);
         }
         const expand = item.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
-        expand ? this.unrecord_expaned_item(item) : this.record_expaned_item(item);
+        expand ? this.unrecord_expaned_item(item, false) : this.record_expaned_item(item, false);
+        this.provider.refresh(item);
+        this.fold_editor_by_item(item, !expand);
         // 启用 focus 可以让该 item 展示在视图的中间
         await this.view.reveal(item, { focus: true });
         this.enable_follow_viewport();
@@ -998,12 +1003,11 @@ export class CureSymbolTreeItemHandler {
         if (first.equal(h) || second?.equal(h)) {
         } else {
             h.highlighten(false);
-            // 如果 item 在视口内，则不折叠编辑区
-            const refresh = !this.is_item_in_viewport(h);
             if (!first.is_same_top_parent(h) || (second && !second.is_same_top_parent(h))) {
-                this.unrecord_expaned_item(h, refresh);
+                this.unrecord_expaned_item(h);
+            } else {
+                this.provider.refresh(h);
             }
-            !refresh && this.provider.refresh(h);
         }
     }
 
