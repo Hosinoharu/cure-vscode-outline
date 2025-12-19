@@ -882,9 +882,25 @@ export class CureSymbolTreeItemHandler {
         }
 
         const to = item.symbol.uri.toString();
-        const curr_doc = vscode.window.activeTextEditor?.document;
+        const curr_editor = vscode.window.activeTextEditor;
+        const curr_doc = curr_editor?.document;
         if (!curr_doc || curr_doc.uri.toString() !== to) {
             return;
+        }
+
+        // 【优化体验】当折叠的时候，如果符号所在的区域和编辑器的可视区域有交集，则不折叠
+        if (!expand) {
+            const viewport_ranges = curr_editor.visibleRanges;
+            // 稍微增加一些范围，超出视口太远才折叠
+            const viewport_start = Math.max(viewport_ranges[0].start.line - 5, 0);
+            const viewport_end = Math.min(
+                viewport_ranges[viewport_ranges.length - 1].end.line + 5,
+                curr_doc.lineCount
+            );
+            const viewport_range = new vscode.Range(viewport_start, 0, viewport_end, 0);
+            if (viewport_range.intersection(item.symbol.range)) {
+                return;
+            }
         }
 
         const start = item.symbol.range.start.line;
