@@ -102,7 +102,7 @@ export class CureBookmarkManager {
      */
     private is_parsing = false;
     /** 保存解析出来的、用于展示到 outline 的结果 */
-    private parsed_result?: CureOneSymbol[];
+    private parsed_result?: OneRegionSymbol[];
 
     /** 获取解析出的结果，默认情况下会先被 RegionFoldingProvider 触发然后保存结果。
      *
@@ -110,15 +110,18 @@ export class CureBookmarkManager {
      */
     public async get_parsed_result(doc: vscode.TextDocument, parse?: boolean) {
         if (!parse && this.parsed_result) {
-            return this.parsed_result;
+            // 这里应该返回一个 copy。否则因为后续会在这些 region 符号中插入子元素
+            // 从而会修改这个原始的数据！
+            return this.parsed_result.map((s) => s.create_region_symbol_ol(doc.uri));
         }
         if (!this.is_parsing) {
-            return await this.parse(doc);
+            const result = await this.parse(doc);
+            return result?.map((s) => s.create_region_symbol_ol(doc.uri));
         }
         // 当前正在解析，需要等待解析完成 —— 并没有再次尝试哟
         return new Promise<CureOneSymbol[] | undefined>((resolve) => {
             setInterval(() => {
-                resolve(this.parsed_result);
+                resolve(this.parsed_result?.map((s) => s.create_region_symbol_ol(doc.uri)));
             }, 200);
         });
     }
@@ -163,7 +166,7 @@ export class CureBookmarkManager {
         this.category["custom"] = symbols;
 
         const { for_outline, for_bookmark } = region_parser.get_result();
-        for_bookmark.forEach((r) => symbols.push(r));
+        for_bookmark.forEach((r) => symbols.push(r.create_region_symbol_bm(uri)));
 
         // ================================================================
         this.is_parsing = false;
@@ -188,8 +191,12 @@ export class CureBookmarkManager {
 
 /** 临时记录一个 #region 符号 */
 class OneRegionSymbol {
-    private children: CureOneSymbol[] = [];
+    private children: OneRegionSymbol[] = [];
     private selection_range: vscode.Range;
+    /** region 的结束符符号 endregion 所在行 */
+    private end_line?: number;
+    /** region 的结束符符号 endregion 所在列 */
+    private end_col?: number;
 
     /**
      * @param name #region 注释中的内容
@@ -200,20 +207,31 @@ class OneRegionSymbol {
         this.selection_range = new vscode.Range(line, col, line, col + "#region".length);
     }
 
+    /** 设置 region 对应的 endregion 所在行、列 */
+    public set_endregion(end_line: number, end_col: number) {
+        this.end_line = end_line;
+        this.end_col = end_col;
+    }
+
     /** 给定 region 的结尾，创建一个用于 outline 展示的符号 */
-    public create_region_symbol_ol(uri: vscode.Uri, end_line: number, end_col: number) {
+    public create_region_symbol_ol(uri: vscode.Uri): CureOneSymbol {
+        if (!this.end_line || !this.end_col) {
+            throw new Error("region symbol has no endregion!");
+        }
+
         const range = new vscode.Range(
             this.line,
             this.col,
-            end_line,
-            end_col + "#endregion".length
+            this.end_line!,
+            this.end_col! + "#endregion".length
         );
+        const children = this.children.map((c) => c.create_region_symbol_ol(uri));
         return CureOneSymbol.from_region_bookmark(
             uri,
             this.name,
             range,
             this.selection_range,
-            this.children
+            children
         );
     }
 
@@ -223,12 +241,16 @@ class OneRegionSymbol {
         return CureOneSymbol.from_region_bookmark(uri, this.name, range, range, []);
     }
 
-    public add_child(child: CureOneSymbol) {
+    public add_child(child: OneRegionSymbol) {
         this.children.push(child);
     }
 
     public get Children() {
         return this.children;
+    }
+
+    public static sort_by_position(s: OneRegionSymbol[]) {
+        s.sort((a, b) => a.line - b.line);
     }
 }
 
@@ -257,9 +279,9 @@ class CureRegionParser {
     }
 
     /** 记录匹配对应的 region，其中包含层级关系，用于在 `outline` 中展示 */
-    private for_outline = [] as CureOneSymbol[];
+    private for_outline = [] as OneRegionSymbol[];
     /** 记录匹配对应的 region（不包含层级关系）、以及没有匹配到 endregion 的 region，用于 `bookmark` 中展示 */
-    private for_bookmark = [] as CureOneSymbol[];
+    private for_bookmark = [] as OneRegionSymbol[];
     /** 模拟堆栈，用于匹配 region 和 endregion */
     private region_stack = [] as OneRegionSymbol[];
     /** 记录从哪里解析出的符号 */
@@ -284,7 +306,7 @@ class CureRegionParser {
 
     /** 获取解析结果 */
     get_result() {
-        CureOneSymbol.sort_by("position", this.for_bookmark);
+        OneRegionSymbol.sort_by_position(this.for_bookmark);
         // 标记未匹配的 region
         while (true) {
             const r = this.region_stack.pop();
@@ -293,7 +315,7 @@ class CureRegionParser {
             }
             r.name = `(drop) ` + r.name;
             // 按照位置排序，从开头插入，这样没有匹配的 region 将靠前显示，便于解决
-            this.for_bookmark.unshift(r.create_region_symbol_bm(this.uri!));
+            this.for_bookmark.unshift(r);
             // 注意，如果 r 具备 children，说明其已经匹配了哟，需要提取它们！
             for (const c of r.Children) {
                 this.for_outline.push(c);
@@ -324,16 +346,16 @@ class CureRegionParser {
         // 完成 region 的范围匹配，如果碰到多余的 endregion，则忽略
         else if (this.region_stack.length > 0) {
             const start = this.region_stack.pop()!;
-            const s = start.create_region_symbol_ol(this.uri, ln, col);
+            start.set_endregion(ln, col);
             // 根据栈的特性，如果当前生成的 region 上面还有 region，则添加到它的子节点中
             // 否则，添加到 region_symbols 中
             const parent = this.region_stack[this.region_stack.length - 1];
             if (parent) {
-                parent.add_child(s);
+                parent.add_child(start);
             } else {
-                this.for_outline.push(s);
+                this.for_outline.push(start);
             }
-            this.for_bookmark.push(start.create_region_symbol_bm(this.uri));
+            this.for_bookmark.push(start);
             this.closed_regions.push(
                 new vscode.FoldingRange(start.line, ln, vscode.FoldingRangeKind.Region)
             );
