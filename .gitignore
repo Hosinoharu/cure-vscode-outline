@@ -3,7 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-icons
+# icons
 todo.md
 languages
 .vscode/bookmarks.json
