@@ -168,6 +168,11 @@ export class CureBookmarkManager {
         const { for_outline, for_bookmark } = region_parser.get_result();
         for_bookmark.forEach((r) => symbols.push(r.create_region_symbol_bm(uri)));
 
+        /** 记录自定义注释的范围，用于高亮其文本 */
+        const bm_ranges: vscode.Range[] = [];
+        for_bookmark.forEach((r) => bm_ranges.push(new vscode.Range(r.line, r.col, r.line + 1, 0)));
+        this.highlight_bookmark(bm_ranges);
+
         // ================================================================
         this.is_parsing = false;
         this.parsed_result = for_outline;
@@ -175,7 +180,7 @@ export class CureBookmarkManager {
     }
 
     /** 记录指定位置的行首 gutter icon  */
-    private static readonly decoration = vscode.window.createTextEditorDecorationType({
+    private readonly decoration = vscode.window.createTextEditorDecorationType({
         gutterIconPath: bookmark_gutter_icon,
         gutterIconSize: "contain",
     });
@@ -183,7 +188,19 @@ export class CureBookmarkManager {
     /** 解析出一个标签后，在它的行首添加一个 icon 标记咯 */
     private add_gutter_icon(ranges: vscode.Range[]) {
         const editor = vscode.window.activeTextEditor;
-        editor?.setDecorations(CureBookmarkManager.decoration, ranges);
+        editor?.setDecorations(this.decoration, ranges);
+    }
+
+    /** 高亮自定义文本用的装饰 */
+    private readonly bm_decoration = vscode.window.createTextEditorDecorationType({
+        color: "#FE5B9B", // cure-idol
+        fontWeight: "bolder",
+    });
+
+    /** 给 region 的文本高亮哟 */
+    private highlight_bookmark(ranges: vscode.Range[]) {
+        const editor = vscode.window.activeTextEditor;
+        editor?.setDecorations(this.bm_decoration, ranges);
     }
 
     //#endregion
@@ -203,7 +220,7 @@ class OneRegionSymbol {
      * @param line 符号所在的行
      * @param col 符号所在的列
      */
-    constructor(public name: string, public line: number, private col: number) {
+    constructor(public name: string, public line: number, public col: number) {
         this.selection_range = new vscode.Range(line, col, line, col + "#region".length);
     }
 
