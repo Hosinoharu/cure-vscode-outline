@@ -16,3 +16,4 @@ todo.md
 dev_doc.md
 webpack.config.js
 out
+*.assets/
