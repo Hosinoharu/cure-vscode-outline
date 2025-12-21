@@ -633,7 +633,7 @@ export class CureCommentTable {
         const info = this.get_comment_info(languageId);
         if (info?.line) {
             for (const comment of info.line) {
-                if (line.startsWith(comment)) {
+                if (line.startsWith(comment) || this.is_special_comment(languageId, line)) {
                     return true;
                 }
             }
@@ -667,5 +667,16 @@ export class CureCommentTable {
             }
         }
         return false;
+    }
+
+    /** 有些编程语言有一些特殊的行，比如 rust 中的 `#[...]` */
+    private static is_special_comment(languageId: string, line: string): boolean {
+        switch (languageId) {
+            case "rust":
+                return line.startsWith("#[");
+
+            default:
+                return false;
+        }
     }
 }
