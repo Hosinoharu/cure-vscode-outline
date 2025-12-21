@@ -206,7 +206,7 @@ export class CureOneSymbol {
         } else {
             // 比如 `Function` 变为 `functionForeground`
             const str = kind[0].toLowerCase() + kind.slice(1) + "Foreground";
-            colorId = `symbolIcon-${str}`;
+            colorId = `symbolIcon.${str}`;
         }
         return new vscode.ThemeColor(colorId);
     }
