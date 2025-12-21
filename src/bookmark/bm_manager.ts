@@ -31,6 +31,9 @@ export class CureBookmarkManager {
     };
     /** 获取书签列表 */
     public get Bookmarks() {
+        // #cure-todo 暂时没什么好的想法
+        // @ts-ignore
+        delete this.category.bookmark;
         return Object.entries(this.category);
     }
     public get CustomBookmark() {
