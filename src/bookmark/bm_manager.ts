@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { CureCommentTable, CureOneSymbol } from "../symbol";
 import { BookmarkCategory } from "../types/symbol";
-import { bookmark_gutter_icon } from "../assets";
 
 /** 管理书签。单例模式 */
 export class CureBookmarkManager {
@@ -165,7 +164,7 @@ export class CureBookmarkManager {
             ranges.push(line.range);
         }
 
-        this.add_gutter_icon(ranges);
+        this.highlight_cure(ranges);
         this.category["custom"] = symbols;
 
         const { for_outline, for_bookmark } = region_parser.get_result();
@@ -182,14 +181,14 @@ export class CureBookmarkManager {
         return for_outline;
     }
 
-    /** 记录指定位置的行首 gutter icon  */
+    /** 给自定义标记添加颜色  */
     private readonly decoration = vscode.window.createTextEditorDecorationType({
-        gutterIconPath: bookmark_gutter_icon,
-        gutterIconSize: "contain",
+        color: "#CD5FFB", // cure-kyunkyun
+        fontWeight: "bolder",
     });
 
-    /** 解析出一个标签后，在它的行首添加一个 icon 标记咯 */
-    private add_gutter_icon(ranges: vscode.Range[]) {
+    /** 解析出一个标签后，设置样式咯 */
+    private highlight_cure(ranges: vscode.Range[]) {
         const editor = vscode.window.activeTextEditor;
         editor?.setDecorations(this.decoration, ranges);
     }
