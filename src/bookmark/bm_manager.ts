@@ -170,10 +170,27 @@ export class CureBookmarkManager {
         const { for_outline, for_bookmark } = region_parser.get_result();
         for_bookmark.forEach((r) => symbols.push(r.create_region_symbol_bm(uri)));
 
-        /** 记录自定义注释的范围，用于高亮其文本 */
-        const bm_ranges: vscode.Range[] = [];
-        for_bookmark.forEach((r) => bm_ranges.push(new vscode.Range(r.line, r.col, r.line + 1, 0)));
-        this.highlight_bookmark(bm_ranges);
+        /** 记录自定义注释的范围与排序信息，用于高亮其文本 */
+        const bm_options: vscode.DecorationOptions[] = [];
+        for_bookmark.forEach((r) => {
+            // 处理 region
+            const range = new vscode.Range(r.line, r.col, r.line + 1, 0);
+            const before = { contentText: `( ${r.get_order()} )` };
+            bm_options.push({ range, renderOptions: { before } });
+
+            // 还要给 endregion 也添加
+            const endregion = r.get_endregion();
+            if (endregion) {
+                const range = new vscode.Range(
+                    endregion.end_line,
+                    endregion.end_col,
+                    endregion.end_line + 1,
+                    0
+                );
+                bm_options.push({ range, renderOptions: { before } });
+            }
+        });
+        this.highlight_bookmark(bm_options);
 
         // ================================================================
         this.is_parsing = false;
@@ -200,9 +217,9 @@ export class CureBookmarkManager {
     });
 
     /** 给 region 的文本高亮哟 */
-    private highlight_bookmark(ranges: vscode.Range[]) {
+    private highlight_bookmark(options: vscode.DecorationOptions[]) {
         const editor = vscode.window.activeTextEditor;
-        editor?.setDecorations(this.bm_decoration, ranges);
+        editor?.setDecorations(this.bm_decoration, options);
     }
 
     //#endregion
@@ -216,6 +233,15 @@ class OneRegionSymbol {
     private end_line?: number;
     /** region 的结束符符号 endregion 所在列 */
     private end_col?: number;
+    /** 记录 region 的层级。比如：
+     * 1. region
+     *    1-1 region
+     *    1-2  region
+     * 2. region
+     *
+     * 记录层级之后方便展示到编辑器中
+     */
+    private order: string = "";
 
     /**
      * @param name #region 注释中的内容
@@ -230,6 +256,13 @@ class OneRegionSymbol {
     public set_endregion(end_line: number, end_col: number) {
         this.end_line = end_line;
         this.end_col = end_col;
+    }
+
+    public get_endregion() {
+        if (this.end_col && this.end_line) {
+            return { end_line: this.end_line, end_col: this.end_col };
+        }
+        return undefined;
     }
 
     /** 给定 region 的结尾，创建一个用于 outline 展示的符号 */
@@ -271,6 +304,20 @@ class OneRegionSymbol {
     public static sort_by_position(s: OneRegionSymbol[]) {
         s.sort((a, b) => a.line - b.line);
     }
+
+    // 返回 region 的层级，如 `1`，`1-1`
+    public get_order() {
+        return this.order;
+    }
+
+    // 增加一个层级，base 是父级的层级，curr 是当前的顺序哟
+    public set_order(base: string, curr: string) {
+        if (base) {
+            this.order = base + "-" + curr;
+        } else {
+            this.order = curr;
+        }
+    }
 }
 
 /** 解析 region 注释。单例模式.
@@ -309,6 +356,35 @@ class CureRegionParser {
     private languageId?: string;
     /** 记录解析出的、配对的 region 的范围 */
     public closed_regions: vscode.FoldingRange[] = [];
+    /** 记录当前 region 的层级。
+     * 
+     * # 关于计算 region 层级的说明
+     * 
+     * 下图中，d 表示 depth，o 表示 order，每个 region 都有一个层级前缀
+     * ```
+        [d: 0, o: 1]  (1) region
+            [d: 1, o: 1]  (1-1) region
+            [d: 1, o: 2]  (1-2) region
+
+        [d: 0, o: 2]  (2) region
+            [d: 1, o: 1]  (2-1) region
+                [d: 2, o: 1]  (2-1-1) region
+            [d: 1, o: 2]  (1-2) region
+                [d: 2, o: 1]  (2-2-1) region
+        ```
+     * 规律：任意一个 `region` 的层级前缀为：其上面每一层的 `order` 拼接，
+        这个前缀说明的就是：该 region 是第几层的第几个咯
+
+     * 所以使用 `depth` 记录当前层级，
+        - 遇到 `region` 时，`depth` 加 1
+        - 遇到 `endregion` 时，`depth` 减 1。
+     * 而 `order` 则记录对应层级的顺序，即 `order[depth]` 记录了 depth 层级的顺序
+        - 遇到 `region` 时，depth + 1 后，`order[depth]` 加 1
+        - 遇到 `endregion` 时，`order[depth + 1]` 改为 0，然后才让 `depth` 减 1
+    */
+    private depth = -1;
+    /** 记录每个层级当前的顺序！*/
+    private orders: number[] = [];
 
     /** 重置状态
      * @param uri  文件路径，用于初始化符号用的
@@ -321,6 +397,8 @@ class CureRegionParser {
         this.closed_regions = [];
         this.uri = uri;
         this.languageId = languageId;
+        this.depth = -1;
+        this.orders = [];
     }
 
     /** 获取解析结果 */
@@ -360,10 +438,21 @@ class CureRegionParser {
         }
         const { name, col, region } = match_result;
         if (region) {
-            this.region_stack.push(new OneRegionSymbol(name, ln, col));
+            this.depth += 1;
+            this.orders[this.depth] = (this.orders[this.depth] || 0) + 1;
+
+            const r = new OneRegionSymbol(name, ln, col);
+            r.set_order(
+                this.orders.slice(0, this.depth).join("-"),
+                this.orders[this.depth].toString()
+            );
+            this.region_stack.push(r);
         }
         // 完成 region 的范围匹配，如果碰到多余的 endregion，则忽略
         else if (this.region_stack.length > 0) {
+            this.orders[this.depth + 1] = 0;
+            this.depth -= 1;
+
             const start = this.region_stack.pop()!;
             start.set_endregion(ln, col);
             // 根据栈的特性，如果当前生成的 region 上面还有 region，则添加到它的子节点中
