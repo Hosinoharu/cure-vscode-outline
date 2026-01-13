@@ -526,7 +526,7 @@ export class CureCommentTable {
      *
      * 其 `value` 可以是另一个编程语言的名称 —— 因为有些编程语言的注释信息是相同的啦
      */
-    private static readonly comment_info = new Map<string, string | CommentInfo>([
+    private static readonly comment_info = new Map<string, string | string[] | CommentInfo>([
         // c 语言系列
         ["c", { line: ["//"], block: [{ start: "/*", end: "*/" }] }],
         ["cpp", "c"],
@@ -568,7 +568,7 @@ export class CureCommentTable {
         ["html", { line: [], block: [{ start: "<!--", end: "-->" }] }],
         ["xml", "html"],
         ["xsl", "html"],
-        ["vue", "html"],
+        ["vue", ["html", "javascript", "typescript", "css"]],
         ["vue-html", "html"],
         ["razor", "html"],
 
@@ -614,27 +614,35 @@ export class CureCommentTable {
     ]);
 
     /** 返回对应编程语言的注释信息 */
-    private static get_comment_info(languageId: string): CommentInfo | undefined {
+    private static get_comment_info(languageId: string): CommentInfo[] {
         const info = this.comment_info.get(languageId);
         if (!info) {
-            return undefined;
+            return [];
         }
 
         if (typeof info === "string") {
             return this.get_comment_info(info);
+        } else if (Array.isArray(info)) {
+            const infos: CommentInfo[] = [];
+            for (const item of info) {
+                const t = this.get_comment_info(item);
+                t && infos.push(...t);
+            }
+            return infos;
         }
 
-        return info;
+        return [info];
     }
 
     /** 判断某一行文本是否为注释 */
     public static is_line_comment(languageId: string, line: string): boolean {
         line = line.trim();
-        const info = this.get_comment_info(languageId);
-        if (info?.line) {
-            for (const comment of info.line) {
-                if (line.startsWith(comment) || this.is_special_comment(languageId, line)) {
-                    return true;
+        for (const info of this.get_comment_info(languageId)) {
+            if (info?.line) {
+                for (const comment of info.line) {
+                    if (line.startsWith(comment) || this.is_special_comment(languageId, line)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -644,11 +652,12 @@ export class CureCommentTable {
     /** 判断某行文本是否为块注释的起始 */
     public static is_block_comment_start(languageId: string, line: string): boolean {
         line = line.trim();
-        const info = this.get_comment_info(languageId);
-        if (info?.block) {
-            for (const comment of info.block) {
-                if (line.startsWith(comment.start)) {
-                    return true;
+        for (const info of this.get_comment_info(languageId)) {
+            if (info?.block) {
+                for (const comment of info.block) {
+                    if (line.startsWith(comment.start)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -658,11 +667,12 @@ export class CureCommentTable {
     /** 判断某行文本是否为块注释的结束 */
     public static is_block_comment_end(languageId: string, line: string): boolean {
         line = line.trim();
-        const info = this.get_comment_info(languageId);
-        if (info?.block) {
-            for (const comment of info.block) {
-                if (line.endsWith(comment.end)) {
-                    return true;
+        for (const info of this.get_comment_info(languageId)) {
+            if (info?.block) {
+                for (const comment of info.block) {
+                    if (line.endsWith(comment.end)) {
+                        return true;
+                    }
                 }
             }
         }
