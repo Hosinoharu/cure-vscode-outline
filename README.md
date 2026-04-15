@@ -2,8 +2,6 @@
 
 # My VSCode Outline Extension
 
-![demo](README.assets/demo.gif)
-
 `[d]` 表示默认的 `vscode outline` 具备该功能。
 
 `[x]` 表示使用插件可以实现该功能。
