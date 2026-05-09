@@ -1,6 +1,4 @@
-**仅个人使用，不会发布到 vscode 扩展市场**。
-
-# My VSCode Outline Extension
+# Cure VSCode Outline
 
 `[d]` 表示默认的 `vscode outline` 具备该功能。
 
