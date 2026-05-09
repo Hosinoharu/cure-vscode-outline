@@ -36,7 +36,7 @@ export class CureOneSymbol {
         detail: string,
         range: vscode.Range,
         selection_range: vscode.Range,
-        children: vscode.DocumentSymbol[] = []
+        children: vscode.DocumentSymbol[] = [],
     ) {
         this.id = crypto.randomUUID();
         this.uri = uri;
@@ -59,7 +59,7 @@ export class CureOneSymbol {
             symbol.detail,
             symbol.range,
             symbol.selectionRange,
-            symbol.children
+            symbol.children,
         );
     }
 
@@ -74,7 +74,7 @@ export class CureOneSymbol {
         uri: vscode.Uri,
         line: number,
         col: number,
-        name?: string
+        name?: string,
     ): CureOneSymbol {
         // 需要获取书签所行的内容
         const doc = vscode.window.activeTextEditor?.document;
@@ -87,7 +87,7 @@ export class CureOneSymbol {
             "CureLineBookmark",
             name ? detail : "",
             new vscode.Range(line, col, line, col + text.length),
-            new vscode.Range(line, col, line, col)
+            new vscode.Range(line, col, line, col),
         );
     }
 
@@ -101,7 +101,7 @@ export class CureOneSymbol {
         uri: vscode.Uri,
         name: string,
         line: number,
-        col: number
+        col: number,
     ): CureOneSymbol {
         return new CureOneSymbol(
             uri,
@@ -109,7 +109,7 @@ export class CureOneSymbol {
             "CureCustomBookmark",
             CureOneSymbol.create_line_info(line, col),
             new vscode.Range(line, col, line, col + name.length),
-            new vscode.Range(line, col, line, col)
+            new vscode.Range(line, col, line, col),
         );
     }
 
@@ -119,7 +119,7 @@ export class CureOneSymbol {
         name: string,
         range: vscode.Range,
         selection_range: vscode.Range,
-        children: CureOneSymbol[]
+        children: CureOneSymbol[],
     ): CureOneSymbol {
         const c = new CureOneSymbol(
             uri,
@@ -127,7 +127,7 @@ export class CureOneSymbol {
             "CureRegion",
             CureOneSymbol.create_line_info(range.start.line, range.start.character),
             range,
-            selection_range
+            selection_range,
         );
         c.children = children;
         return c;
@@ -252,7 +252,7 @@ export class CureOneSymbol {
         // 如果向上查看的第一行是块注释，则需要标记，直到找到块注释的起始位置为止
         const is_block_comment_end = CureCommentTable.is_block_comment_end(
             curr_doc.languageId.toLowerCase(),
-            line
+            line,
         );
 
         while (curr_line >= 0) {
@@ -484,7 +484,7 @@ export class CureSymbolCMD {
                     vscode.window.showErrorMessage("open file failed:" + e.message);
                     return;
                 }
-            }
+            },
         );
     }
 
@@ -496,7 +496,7 @@ export class CureSymbolCMD {
      */
     public create_locate(
         treeitem: { symbol: CureOneSymbol },
-        callback?: () => Promise<void>
+        callback?: () => Promise<void>,
     ): vscode.Command {
         return {
             title: "locate",
@@ -520,6 +520,8 @@ interface CommentInfo {
  * 所以直接硬编码在这里了。
  *
  * 这些编程语言名称在：https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
+ *
+ * 还是等官方修复？[getLanguageConfiguration() API method is missing](https://github.com/microsoft/vscode/issues/109919)
  */
 export class CureCommentTable {
     /** 存储现有 VSCode 支持的编程语言的注释信息，由 AI 生成！
@@ -544,6 +546,7 @@ export class CureCommentTable {
         ["objective-c", "c"],
         ["objective-cpp", "c"],
         ["php", { line: ["//", "#"], block: [{ start: "/*", end: "*/" }] }],
+        ["gdscript", { line: ["#"], block: [] }],
 
         // shell 系列
         ["shellscript", { line: ["#"], block: [] }],
